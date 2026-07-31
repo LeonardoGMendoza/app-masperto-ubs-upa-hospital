@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, SlidersHorizontal, Navigation2, Building2, X, ChevronRight, 
   MapPin, Clock, ArrowLeft, Menu, User, Map, Inbox, Settings, HelpCircle, Power,
-  Briefcase, Home as HomeIcon, Award, Shield, Edit2, Music, Volume2, Compass
+  Briefcase, Home as HomeIcon, Award, Shield, Edit2
 } from 'lucide-react';
 import MapComponent from './MapComponent';
 import { auth, loginWithGoogle, logout, addPoints, updateUserData, db } from './firebase';
@@ -13,10 +13,15 @@ import './App.css';
 // ── Zona Leste fallback data ──────────────────────────────────────────────────
 const FALLBACK = [
   { id: 9001, name: 'UBS Itaquera', type: 'UBS', lat: -23.5394491, lon: -46.4551811, address: 'Itaquera, São Paulo – SP' },
-  { id: 9002, name: 'Hospital Santa Marcelina', type: 'Hospital', lat: -23.5542809, lon: -46.4613548, address: 'R. Santa Marcelina, 177' },
-  { id: 9003, name: 'UBS Vila Ramos', type: 'UBS', lat: -23.5205252, lon: -46.463897, address: 'Vila Ramos, São Paulo' },
-  { id: 9004, name: 'UBS Jardim Robru', type: 'UBS', lat: -23.5213333, lon: -46.4124441, address: 'Jardim Robru, São Paulo' },
-  { id: 9005, name: 'Hospital Tide Setubal', type: 'Hospital', lat: -23.4971785, lon: -46.4400842, address: 'São Miguel Paulista' },
+  { id: 9002, name: 'Hospital Santa Marcelina – Itaquera', type: 'Hospital', lat: -23.5542809, lon: -46.4613548, address: 'R. Santa Marcelina, 177 – Itaquera' },
+  { id: 9003, name: 'UBS Vila Ramos', type: 'UBS', lat: -23.5205252, lon: -46.463897, address: 'Vila Ramos, São Paulo – SP' },
+  { id: 9004, name: 'UBS Jardim Robru', type: 'UBS', lat: -23.5213333, lon: -46.4124441, address: 'Jardim Robru, São Paulo – SP' },
+  { id: 9005, name: 'Hospital Tide Setubal', type: 'Hospital', lat: -23.4971785, lon: -46.4400842, address: 'São Miguel Paulista, São Paulo – SP' },
+  { id: 9006, name: 'UBS Vila Matilde', type: 'UBS', lat: -23.5367323, lon: -46.5277206, address: 'Vila Matilde, São Paulo – SP' },
+  { id: 9007, name: 'UBS Jardim Keralux', type: 'UBS', lat: -23.4822427, lon: -46.4931264, address: 'Jardim Keralux, São Paulo – SP' },
+  { id: 9008, name: 'UBS Pedro de Souza Campos', type: 'UBS', lat: -23.503142, lon: -46.4839706, address: 'São Paulo – SP' },
+  { id: 9009, name: 'UPA Penha', type: 'UPA', lat: -23.5199, lon: -46.5309, address: 'Penha, São Paulo – SP' },
+  { id: 9010, name: 'AMA/UBS Jardim Nordeste', type: 'AMA', lat: -23.5064, lon: -46.4715, address: 'Jardim Nordeste, São Paulo – SP' },
 ];
 
 function App() {
@@ -90,6 +95,7 @@ function App() {
     alert("Salvo com sucesso!");
   };
 
+  // ── Route to Home or Work ──────────────────────────────────────────────────
   const routeToPlace = async (placeType) => {
     const address = placeType === 'home' ? userData.home : userData.work;
     if (!address) {
@@ -99,6 +105,7 @@ function App() {
     
     setLoading(true);
     try {
+      // Geocode the address
       const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
       const data = await resp.json();
       if (data && data.length > 0) {
@@ -122,6 +129,7 @@ function App() {
     }
   };
 
+  // ── Navigation mode state ──────────────────────────────────────────────────
   const [navMode, setNavMode] = useState(false);
   const [routeCoords, setRouteCoords] = useState(null);
   const [routeInfo, setRouteInfo] = useState(null);
@@ -307,44 +315,12 @@ out center;`;
         </div>
       )}
 
-      {/* Map (now using MapLibre) */}
-      <MapComponent
-        userLocation={userLocation}
-        facilities={facilities}
-        activeFacility={activeFacility}
-        onFacilitySelect={openDetail}
-        onMapMove={handleMapMove}
-        getTypeColor={typeColor}
-        navMode={navMode}
-        routeCoords={routeCoords}
-      />
-
-      {/* ── MAP FLOATING CONTROLS (Hamburger, Compass, Music, Volume) ── */}
-      {!navMode && !detailOpen && (
-        <>
-          <button className="hamburger-btn" style={{top: 16, left: 16}} onClick={() => setSidebarOpen(true)}>
-            <Menu size={24} color="#111827" />
-            {!currentUser && <div className="hamburger-dot" />}
-          </button>
-          
-          <div className="floating-map-btn" style={{top: 80, left: 16}}>
-            <Compass size={24} color="#EF4444" style={{transform: 'rotate(45deg)'}} />
-          </div>
-
-          <div className="floating-map-btn" style={{top: 16, right: 16}}>
-            <Music size={24} color="#111827" />
-          </div>
-
-          <div className="floating-map-btn" style={{top: 80, right: 16}}>
-            <Volume2 size={24} color="#111827" />
-          </div>
-
-          <div className={`search-area-wrap ${!showSearchBtn ? 'hidden' : ''}`} style={{top: 16, left: '50%', transform: 'translateX(-50%)'}}>
-            <button className="search-area-btn" onClick={searchNewArea}>
-              <MapPin size={15} /> Buscar nesta área
-            </button>
-          </div>
-        </>
+      {/* Hamburger Menu Button */}
+      {!navMode && (
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
+          <Menu size={24} color="#111827" />
+          {!currentUser && <div className="hamburger-dot" />}
+        </button>
       )}
 
       {/* Sidebar Overlay & Menu */}
@@ -420,7 +396,8 @@ out center;`;
               </div>
             </div>
 
-            <div className="profile-humor-icon" style={{margin: '0 auto 20px', display: 'flex', justifyContent: 'center'}}>
+            <div className="profile-humor-icon" style={{margin: '-15px auto 10px'}}>
+              {/* Custom Red Pin as the Humor Icon */}
               <div className="custom-red-pin" style={{transform: 'scale(1.2) rotate(-45deg)', margin: '10px 0'}}>
                 <div className="custom-red-pin-inner">
                   <div className="red-pin-cross"></div>
@@ -439,6 +416,12 @@ out center;`;
           </div>
 
           <div className="profile-settings-list">
+            <div className="profile-setting-item">
+              Ficar invisível
+              <div style={{width: 44, height: 24, background: '#E5E7EB', borderRadius: 12, position: 'relative'}}>
+                <div style={{width: 20, height: 20, background: '#fff', borderRadius: 10, position: 'absolute', top: 2, left: 2, boxShadow: '0 1px 3px rgba(0,0,0,.2)'}}></div>
+              </div>
+            </div>
             <div className="profile-setting-item" onClick={() => setAchievementsOpen(true)}>
               <div className="profile-setting-left">
                 <Award size={22} color="#6B7280" />
@@ -454,13 +437,15 @@ out center;`;
             </div>
             <div className="profile-setting-item" onClick={() => setAccountOpen(true)}>
               <div className="profile-setting-left">
-                <User size={22} color="#6B7280" /> Conta e login
+                <User size={22} color="#6B7280" />
+                Conta e login
               </div>
               <ChevronRight size={20} color="#D1D5DB" />
             </div>
             <div className="profile-setting-item" onClick={() => setHomeWorkOpen(true)}>
               <div className="profile-setting-left">
-                <HomeIcon size={22} color="#6B7280" /> Casa e trabalho
+                <HomeIcon size={22} color="#6B7280" />
+                Casa e trabalho
               </div>
               <ChevronRight size={20} color="#D1D5DB" />
             </div>
@@ -539,17 +524,7 @@ out center;`;
         </div>
         <div className="sub-modal-content">
           <div className="sub-modal-banner" style={{paddingBottom: 16}}>
-            {currentUser?.photoURL ? (
-              <img src={currentUser.photoURL} style={{width: 80, height: 80, borderRadius: '50%'}} alt="Avatar" />
-            ) : (
-              <div className="custom-red-pin" style={{transform: 'scale(1.5) rotate(-45deg)', margin: '20px 0'}}>
-                <div className="custom-red-pin-inner">
-                  <div className="red-pin-cross"></div>
-                  <div className="red-pin-eyes"><div className="red-pin-eye"></div><div className="red-pin-eye"></div></div>
-                  <div className="red-pin-smile"></div>
-                </div>
-              </div>
-            )}
+             <img src={currentUser?.photoURL || '/logo.png'} style={{width: 80, height: 80, borderRadius: '50%'}} alt="Avatar" />
           </div>
           <div className="sub-modal-list">
             <div className="sub-modal-list-item">
@@ -614,132 +589,18 @@ out center;`;
         </div>
       </div>
 
-      {/* ═══════════════ NORMAL MODE ═══════════════ */}
-      {!navMode && (
-        <>
-          <button
-            className={`fab-nav ${!activeFacility ? 'fab-disabled' : ''}`}
-            onClick={() => activeFacility && startNav(activeFacility)}
-            disabled={!activeFacility}
-            style={{bottom: 220}} // move up above the drawer
-          >
-            <Navigation2 size={22} fill={activeFacility ? 'white' : '#9CA3AF'} />
-          </button>
 
-          {detailOpen && activeFacility ? (
-            <div className="detail-overlay" onClick={closeDetail}>
-              <div className="detail-sheet" onClick={e => e.stopPropagation()}>
-                <div className="sheet-handle" />
-                <div className="detail-header">
-                  <div className="detail-type-badge" style={{ background: typeColor(activeFacility.type) + '20', color: typeColor(activeFacility.type) }}>
-                    {activeFacility.type}
-                  </div>
-                  <button className="close-btn" onClick={closeDetail}><X size={20} /></button>
-                </div>
-                <h2 className="detail-name">{activeFacility.name}</h2>
-                <p className="detail-dist"><MapPin size={14} color="#6B7280" /> {fmtDist(activeFacility.distance)} de distância</p>
-                <div className="detail-rows">
-                  <div className="detail-row">
-                    <div className="detail-row-icon" style={{ background: typeColor(activeFacility.type) + '18' }}>
-                      <Building2 size={18} color={typeColor(activeFacility.type)} />
-                    </div>
-                    <div>
-                      <div className="detail-row-label">Tipo de unidade</div>
-                      <div className="detail-row-value">{activeFacility.type}</div>
-                    </div>
-                  </div>
-                  <div className="detail-row">
-                    <div className="detail-row-icon" style={{ background: '#F0FDF4' }}>
-                      <Clock size={18} color="#16A34A" />
-                    </div>
-                    <div>
-                      <div className="detail-row-label">Status</div>
-                      <div className="detail-row-value status-open">● Disponível</div>
-                    </div>
-                  </div>
-                  <div className="detail-row">
-                    <div className="detail-row-icon" style={{ background: '#F0F9FF' }}>
-                      <MapPin size={18} color="#0284C7" />
-                    </div>
-                    <div>
-                      <div className="detail-row-label">Endereço</div>
-                      <div className="detail-row-value">{activeFacility.address}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="detail-actions">
-                  <button className="btn-route" onClick={() => startNav(activeFacility)}>
-                    <Navigation2 size={18} /> Ir agora
-                  </button>
-                  <button className="btn-share" onClick={async () => {
-                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}`;
-                    try {
-                      if (navigator.share) await navigator.share({ text });
-                      else await navigator.clipboard.writeText(text);
-                    } catch(e) { console.log(e); }
-                  }}>Compartilhar</button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="waze-bottom-drawer">
-              <div className="sheet-handle" style={{margin: '-4px auto 16px'}} />
-              <div className="search-bar" style={{position: 'relative', top: 0, left: 0, right: 0, width: '100%', borderRadius: 24, boxShadow: 'none', background: '#F3F4F6'}}>
-                <Search size={18} color="#6B7280" />
-                <input 
-                  type="text" 
-                  placeholder="Para onde?" 
-                  style={{background: 'transparent'}}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearch}
-                />
-              </div>
-
-              <div className="waze-buttons-row">
-                <div className="waze-btn-square" onClick={() => routeToPlace('home')}>
-                  <div style={{background: '#FEE2E2', padding: 8, borderRadius: '50%'}}>
-                    <HomeIcon size={24} color="#EF4444" />
-                  </div>
-                  Casa
-                </div>
-                <div className="waze-btn-square" onClick={() => routeToPlace('work')}>
-                  <div style={{background: '#FEF3C7', padding: 8, borderRadius: '50%'}}>
-                    <Briefcase size={24} color="#D97706" />
-                  </div>
-                  Trabalho
-                </div>
-                <div className="waze-btn-square" style={{borderColor: 'transparent', boxShadow: 'none'}}>
-                  <div style={{background: '#EFF6FF', padding: 8, borderRadius: '50%'}}>
-                    <MapPin size={24} color="#2563EB" />
-                  </div>
-                  Recentes
-                </div>
-              </div>
-
-              <div className="facility-list" style={{maxHeight: '30vh', marginTop: 16}}>
-                {facilities.length === 0 && !loading && (
-                  <p className="empty-msg">Nenhuma unidade encontrada. Arraste o mapa.</p>
-                )}
-                {facilities.map(fac => (
-                  <div key={fac.id} className="facility-card" onClick={() => openDetail(fac)} style={{padding: '12px 0', borderBottom: '1px solid #F3F4F6', boxShadow: 'none'}}>
-                    <div className="fc-icon" style={{ background: typeColor(fac.type) + '18', color: typeColor(fac.type) }}>
-                      <Building2 size={18} />
-                    </div>
-                    <div className="fc-info">
-                      <div className="fc-name">{fac.name}</div>
-                      <div className="fc-type" style={{ color: typeColor(fac.type) }}>{fac.type}</div>
-                    </div>
-                    <div className="fc-right">
-                      <div className="fc-dist">{fmtDist(fac.distance)}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+      {/* Map (now using MapLibre) */}
+      <MapComponent
+        userLocation={userLocation}
+        facilities={facilities}
+        activeFacility={activeFacility}
+        onFacilitySelect={openDetail}
+        onMapMove={handleMapMove}
+        getTypeColor={typeColor}
+        navMode={navMode}
+        routeCoords={routeCoords}
+      />
 
       {/* ═══════════════ NAVIGATION MODE (Screen 3 - Waze style) ═══════════════ */}
       {navMode && (
@@ -802,6 +663,134 @@ out center;`;
         </>
       )}
 
+      {/* ═══════════════ NORMAL MODE ═══════════════ */}
+      {!navMode && (
+        <>
+          <div className="top-bar">
+            <div className="search-bar">
+              <Search size={18} color="#6B7280" />
+              <input 
+                type="text" 
+                placeholder="Para onde?" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+              />
+              <div className="divider" />
+              <button className="filter-icon-btn"><SlidersHorizontal size={18} color="#2563EB" /></button>
+            </div>
+
+            {/* Quick Home / Work Buttons */}
+            <div className="quick-buttons-row">
+              <div className="quick-btn" onClick={() => routeToPlace('home')}>
+                <HomeIcon size={18} /> Casa
+              </div>
+              <div className="quick-btn" onClick={() => routeToPlace('work')}>
+                <Briefcase size={18} style={{color: '#D97706'}} /> Trabalho
+              </div>
+            </div>
+          </div>
+
+          <div className={`search-area-wrap ${!showSearchBtn ? 'hidden' : ''}`} style={{top: 140}}>
+            <button className="search-area-btn" onClick={searchNewArea}>
+              <MapPin size={15} /> Buscar nesta área
+            </button>
+          </div>
+
+          <button
+            className={`fab-nav ${!activeFacility ? 'fab-disabled' : ''}`}
+            onClick={() => activeFacility && startNav(activeFacility)}
+            disabled={!activeFacility}
+          >
+            <Navigation2 size={22} fill={activeFacility ? 'white' : '#9CA3AF'} />
+          </button>
+
+          {detailOpen && activeFacility && (
+            <div className="detail-overlay" onClick={closeDetail}>
+              <div className="detail-sheet" onClick={e => e.stopPropagation()}>
+                <div className="sheet-handle" />
+                <div className="detail-header">
+                  <div className="detail-type-badge" style={{ background: typeColor(activeFacility.type) + '20', color: typeColor(activeFacility.type) }}>
+                    {activeFacility.type}
+                  </div>
+                  <button className="close-btn" onClick={closeDetail}><X size={20} /></button>
+                </div>
+                <h2 className="detail-name">{activeFacility.name}</h2>
+                <p className="detail-dist"><MapPin size={14} color="#6B7280" /> {fmtDist(activeFacility.distance)} de distância</p>
+                <div className="detail-rows">
+                  <div className="detail-row">
+                    <div className="detail-row-icon" style={{ background: typeColor(activeFacility.type) + '18' }}>
+                      <Building2 size={18} color={typeColor(activeFacility.type)} />
+                    </div>
+                    <div>
+                      <div className="detail-row-label">Tipo de unidade</div>
+                      <div className="detail-row-value">{activeFacility.type}</div>
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <div className="detail-row-icon" style={{ background: '#F0FDF4' }}>
+                      <Clock size={18} color="#16A34A" />
+                    </div>
+                    <div>
+                      <div className="detail-row-label">Status</div>
+                      <div className="detail-row-value status-open">● Disponível</div>
+                    </div>
+                  </div>
+                  <div className="detail-row">
+                    <div className="detail-row-icon" style={{ background: '#F0F9FF' }}>
+                      <MapPin size={18} color="#0284C7" />
+                    </div>
+                    <div>
+                      <div className="detail-row-label">Endereço</div>
+                      <div className="detail-row-value">{activeFacility.address}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="detail-actions">
+                  <button className="btn-route" onClick={() => startNav(activeFacility)}>
+                    <Navigation2 size={18} /> Ir agora
+                  </button>
+                  <button className="btn-share" onClick={() => {
+                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}`;
+                    navigator.share ? navigator.share({ text }) : navigator.clipboard.writeText(text);
+                  }}>Compartilhar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!detailOpen && (
+            <div className="bottom-sheet">
+              <div className="sheet-handle" />
+              <div className="sheet-label">UNIDADES PRÓXIMAS · {facilities.length} encontradas</div>
+              <div className="facility-list">
+                {facilities.length === 0 && !loading && (
+                  <p className="empty-msg">Nenhuma unidade encontrada. Arraste o mapa e toque em "Buscar nesta área".</p>
+                )}
+                {facilities.map(fac => (
+                  <div
+                    key={fac.id}
+                    className={`facility-card ${activeFacility?.id === fac.id ? 'fc-active' : ''}`}
+                    onClick={() => openDetail(fac)}
+                  >
+                    <div className="fc-icon" style={{ background: typeColor(fac.type) + '18', color: typeColor(fac.type) }}>
+                      <Building2 size={18} />
+                    </div>
+                    <div className="fc-info">
+                      <div className="fc-name">{fac.name}</div>
+                      <div className="fc-type" style={{ color: typeColor(fac.type) }}>{fac.type}</div>
+                    </div>
+                    <div className="fc-right">
+                      <div className="fc-dist">{fmtDist(fac.distance)}</div>
+                      <ChevronRight size={16} color="#D1D5DB" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

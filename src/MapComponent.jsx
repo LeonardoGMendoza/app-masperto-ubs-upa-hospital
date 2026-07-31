@@ -3,10 +3,33 @@ import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapl
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// We use Carto Voyager to avoid CORS blocks on iOS Safari that cause the white screen
-const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+// Using OpenStreetMap tiles because Waze tiles cause WebGL crashes on iPhones due to CORS blocks. OSM shows streets clearly.
+const MAP_STYLE = {
+  version: 8,
+  sources: {
+    'osm-tiles': {
+      type: 'raster',
+      tiles: [
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors'
+    }
+  },
+  layers: [
+    {
+      id: 'osm-layer',
+      type: 'raster',
+      source: 'osm-tiles',
+      minzoom: 0,
+      maxzoom: 20
+    }
+  ]
+};
 
-// The exact marker image created purely in CSS to avoid black backgrounds and broken image links
+// The exact red pin marker created purely in CSS to avoid black backgrounds and broken image links
 const UserMarkerIcon = () => (
   <div className="custom-red-pin">
     <div className="custom-red-pin-inner">
@@ -20,23 +43,16 @@ const UserMarkerIcon = () => (
   </div>
 );
 
-// Cute Waze-style pins for the facilities
-const FacilityMarkerIcon = ({ color, type }) => (
+const FacilityMarkerIcon = ({ color }) => (
   <div style={{
-    width: 32, height: 32, background: '#fff', border: `3px solid ${color}`,
+    width: 32, height: 32, background: color, border: '3px solid #fff',
     borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)',
-    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    position: 'relative'
+    boxShadow: '0 4px 12px rgba(0,0,0,.3)'
   }}>
     <div style={{
-      width: 20, height: 20, background: color, borderRadius: '50%',
-      transform: 'rotate(45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
-      {type === 'Hospital' || type === 'UPA' ? 
-        <span style={{color: '#fff', fontSize: '14px', fontWeight: 'bold'}}>+</span> : 
-        <span style={{color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>H</span>}
-    </div>
+      width: 12, height: 12, background: '#fff', borderRadius: '50%',
+      position: 'absolute', top: 7, left: 7
+    }}></div>
   </div>
 );
 
