@@ -779,7 +779,7 @@ out center;`;
                 </div>
                 <div className="facility-detail-actions">
                   <button className="btn-waze-primary" onClick={() => startNav(activeFacility)} style={{ flex: 1 }}>
-                    <Navigation size={18} /> Ir agora
+                    <Navigation2 size={18} /> Ir agora
                   </button>
                   <button className="btn-waze-secondary" style={{ padding: '14px 20px' }} onClick={() => {
                     const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}`;
