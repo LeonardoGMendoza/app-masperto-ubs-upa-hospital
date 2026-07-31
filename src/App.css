@@ -995,3 +995,6 @@ body {
 .btn-waze-primary:active { transform: scale(0.96); box-shadow: 0 2px 5px rgba(0, 153, 255, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1); }
 .btn-waze-secondary { background: #EFF6FF; color: #007AFF; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 16px; border: none; cursor: pointer; transition: all 0.2s ease; }
 .btn-waze-secondary:active { transform: scale(0.96); background: #E0F0FF; }
+
+.nav-top-bar { position: absolute; top: 0; left: 0; right: 0; z-index: 1000; }
+.nav-bottom-panel { position: absolute; bottom: 0; left: 0; right: 0; z-index: 1000; }

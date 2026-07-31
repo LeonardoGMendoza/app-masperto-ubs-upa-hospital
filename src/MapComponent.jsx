@@ -156,7 +156,7 @@ const MapComponent = ({
             [userLocation.lon, userLocation.lat]
           );
           bounds.extend([activeFacility.lon, activeFacility.lat]);
-          routeCoords.forEach(c => bounds.extend([c[1], c[0]]));
+          routeCoords.forEach(c => bounds.extend([c[0], c[1]]));
           map.fitBounds(bounds, { padding: 80, pitch: 0, bearing: 0, duration: 1000 });
         } else {
           // ...senão, já vai direto pra visão de navegação
@@ -188,8 +188,9 @@ const MapComponent = ({
       }
     }, 1800);
     return () => clearTimeout(t);
-  }, [navMode, routeCoords]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [navMode, routeCoords]); // eslint-disable-line react-hooks
 
+  // Prepare Route GeoJSON
   const routeData = useMemo(() => {
     if (!routeCoords || routeCoords.length === 0) return null;
     return {
@@ -197,7 +198,7 @@ const MapComponent = ({
       properties: {},
       geometry: {
         type: 'LineString',
-        coordinates: routeCoords.map(c => [c[1], c[0]])
+        coordinates: routeCoords // OSRM with geometries=geojson returns [lon, lat] natively
       }
     };
   }, [routeCoords]);
