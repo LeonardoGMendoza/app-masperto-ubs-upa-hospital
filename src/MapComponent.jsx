@@ -1,10 +1,9 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix default icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -28,6 +27,21 @@ const createUserIcon = () =>
     iconAnchor: [9, 9],
   });
 
+const createDestIcon = (color) =>
+  L.divIcon({
+    className: 'custom-marker',
+    html: `<div style="
+      width:36px;height:36px;
+      background:${color};
+      border:3px solid #fff;
+      border-radius:50% 50% 50% 0;
+      transform:rotate(-45deg);
+      box-shadow:0 4px 12px rgba(0,0,0,.3);
+    "></div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36],
+  });
+
 const createClusterIcon = (cluster) =>
   L.divIcon({
     html: `<div class="cluster-icon">${cluster.getChildCount()}</div>`,
@@ -36,6 +50,20 @@ const createClusterIcon = (cluster) =>
   });
 
 const userIcon = createUserIcon();
+
+// Fit map to show both user and destination
+const FitBounds = ({ userLocation, destination }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (userLocation && destination) {
+      map.fitBounds(
+        [[userLocation.lat, userLocation.lon], [destination.lat, destination.lon]],
+        { padding: [60, 60], animate: true }
+      );
+    }
+  }, [userLocation, destination, map]);
+  return null;
+};
 
 const ChangeView = ({ center, zoom }) => {
   const map = useMap();
@@ -53,8 +81,8 @@ const MapEvents = ({ onMove }) => {
   return null;
 };
 
-const MapComponent = ({ userLocation, facilities, activeFacility, onFacilitySelect, onMapMove, getTypeColor }) => {
-  const defaultCenter = [-23.5505, -46.6333];
+const MapComponent = ({ userLocation, facilities, activeFacility, onFacilitySelect, onMapMove, getTypeColor, navMode, routeCoords }) => {
+  const defaultCenter = [-23.5413, -46.4496];
   const center = userLocation ? [userLocation.lat, userLocation.lon] : defaultCenter;
 
   return (
@@ -68,33 +96,68 @@ const MapComponent = ({ userLocation, facilities, activeFacility, onFacilitySele
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      <ChangeView center={center} zoom={userLocation ? 15 : 13} />
+
+      {!navMode && <ChangeView center={center} zoom={userLocation ? 15 : 13} />}
+      {navMode && activeFacility && userLocation && (
+        <FitBounds userLocation={userLocation} destination={activeFacility} />
+      )}
+
       <MapEvents onMove={onMapMove} />
 
+      {/* Route polyline */}
+      {navMode && routeCoords && routeCoords.length > 0 && (
+        <>
+          {/* Shadow */}
+          <Polyline
+            positions={routeCoords}
+            pathOptions={{ color: '#1d4ed8', weight: 10, opacity: 0.2 }}
+          />
+          {/* Main route */}
+          <Polyline
+            positions={routeCoords}
+            pathOptions={{ color: '#2563EB', weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
+          />
+        </>
+      )}
+
+      {/* User location */}
       {userLocation && (
         <Marker position={[userLocation.lat, userLocation.lon]} icon={userIcon}>
           <Popup>Você está aqui</Popup>
         </Marker>
       )}
 
-      <MarkerClusterGroup
-        iconCreateFunction={createClusterIcon}
-        spiderfyOnMaxZoom={true}
-        showCoverageOnHover={false}
-        zoomToBoundsOnClick={true}
-        maxClusterRadius={50}
-      >
-        {facilities.map((fac) => (
-          <Marker
-            key={fac.id}
-            position={[fac.lat, fac.lon]}
-            icon={createPinIcon(getTypeColor ? getTypeColor(fac.type) : '#2563EB')}
-            eventHandlers={{ click: () => onFacilitySelect(fac) }}
-          >
-            <Popup><strong>{fac.name}</strong><br />{fac.type}</Popup>
-          </Marker>
-        ))}
-      </MarkerClusterGroup>
+      {/* Destination pin in nav mode */}
+      {navMode && activeFacility && (
+        <Marker
+          position={[activeFacility.lat, activeFacility.lon]}
+          icon={createDestIcon(getTypeColor ? getTypeColor(activeFacility.type) : '#2563EB')}
+        >
+          <Popup>{activeFacility.name}</Popup>
+        </Marker>
+      )}
+
+      {/* Facility cluster markers (hidden in nav mode) */}
+      {!navMode && (
+        <MarkerClusterGroup
+          iconCreateFunction={createClusterIcon}
+          spiderfyOnMaxZoom={true}
+          showCoverageOnHover={false}
+          zoomToBoundsOnClick={true}
+          maxClusterRadius={50}
+        >
+          {facilities.map((fac) => (
+            <Marker
+              key={fac.id}
+              position={[fac.lat, fac.lon]}
+              icon={createPinIcon(getTypeColor ? getTypeColor(fac.type) : '#2563EB')}
+              eventHandlers={{ click: () => onFacilitySelect(fac) }}
+            >
+              <Popup><strong>{fac.name}</strong><br />{fac.type}</Popup>
+            </Marker>
+          ))}
+        </MarkerClusterGroup>
+      )}
     </MapContainer>
   );
 };
