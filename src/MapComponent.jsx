@@ -3,43 +3,30 @@ import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapl
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Detect iOS to prevent WebGL CORS crash with Waze tiles
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-// Use Waze tiles for Android/Desktop (user preference), and fallback to OSM for iOS to prevent the white screen crash
-const MAP_STYLE = isIOS ? {
+// ── Map style ────────────────────────────────────────────────────────────────
+// CARTO Voyager: estilo colorido, gratuito, oficialmente liberado para uso em
+// qualquer app (com atribuição), e funciona igual em iOS, Android e Desktop.
+// Isso elimina o "hack" que trocava para tiles feios no iPhone e o risco de
+// usar os tiles internos do Waze (que não são uma API pública oficial).
+const MAP_STYLE = {
   version: 8,
   sources: {
-    'osm-tiles': {
+    'carto-voyager': {
       type: 'raster',
       tiles: [
-        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
-        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+        'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+        'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
       ],
       tileSize: 256,
-      attribution: '© OpenStreetMap'
+      attribution: '© OpenStreetMap contributors © CARTO'
     }
   },
-  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 20 }]
-} : {
-  version: 8,
-  sources: {
-    'waze-tiles': {
-      type: 'raster',
-      tiles: [
-        'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles2.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles3.waze.com/tiles/{z}/{x}/{y}.png'
-      ],
-      tileSize: 256,
-      attribution: '© Waze'
-    }
-  },
-  layers: [{ id: 'waze-layer', type: 'raster', source: 'waze-tiles', minzoom: 0, maxzoom: 20 }]
+  layers: [{ id: 'carto-voyager-layer', type: 'raster', source: 'carto-voyager', minzoom: 0, maxzoom: 20 }]
 };
 
-const UserMarkerIcon = ({ invisible }) => (
+const UserMarkerIcon = ({ invisible, bearing = 0, navMode }) => (
   invisible ? (
     <div className="waze-ghost" style={{transform: 'scale(0.9)'}}>
       <div className="waze-ghost-wheel-left"></div>
@@ -54,6 +41,17 @@ const UserMarkerIcon = ({ invisible }) => (
         </div>
       </div>
     </div>
+  ) : navMode ? (
+    // Seta de direção estilo Waze durante a navegação
+    <div style={{
+      width: 0, height: 0,
+      borderLeft: '14px solid transparent',
+      borderRight: '14px solid transparent',
+      borderBottom: '28px solid #2563EB',
+      filter: 'drop-shadow(0 3px 6px rgba(0,0,0,.4))',
+      transform: `rotate(${bearing}deg)`,
+      transition: 'transform 0.3s ease'
+    }} />
   ) : (
     <div className="custom-red-pin">
       <div className="custom-red-pin-inner">
@@ -94,6 +92,17 @@ const DestinationMarkerIcon = ({ color }) => (
   </div>
 );
 
+// Calcula o rumo (bearing) entre dois pontos, pra seta apontar na direção certa
+function calcBearing(lat1, lon1, lat2, lon2) {
+  const toRad = d => d * Math.PI / 180;
+  const toDeg = r => r * 180 / Math.PI;
+  const dLon = toRad(lon2 - lon1);
+  const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+            Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
 const MapComponent = ({
   userLocation,
   facilities,
@@ -106,11 +115,17 @@ const MapComponent = ({
   invisible
 }) => {
   const mapRef = useRef();
-  
+
   const defaultCenter = { longitude: -46.4496, latitude: -23.5413, zoom: 13, pitch: 45, bearing: 0 };
   const [viewState, setViewState] = useState(defaultCenter);
 
-  // When userLocation is available initially, center it
+  // Rumo do usuário até o destino, pra rotacionar a seta e a câmera (visual tipo Waze)
+  const bearing = useMemo(() => {
+    if (!navMode || !userLocation || !activeFacility) return 0;
+    return calcBearing(userLocation.lat, userLocation.lon, activeFacility.lat, activeFacility.lon);
+  }, [navMode, userLocation, activeFacility]);
+
+  // Centraliza no usuário quando a localização chega (fora do modo navegação)
   useEffect(() => {
     if (userLocation && !navMode) {
       setViewState(prev => ({
@@ -118,37 +133,63 @@ const MapComponent = ({
         longitude: userLocation.lon,
         latitude: userLocation.lat,
         zoom: 14.5,
-        pitch: 60, // 3D effect
+        pitch: 60,
         transitionDuration: 1000
       }));
     }
   }, [userLocation, navMode]);
 
-  // Fit bounds to route in Nav Mode
+  // No modo navegação: câmera "voa" pra trás do usuário, olhando na direção do destino,
+  // igual ao Waze. Só mexemos na câmera quando o mapa realmente terminou de
+  // carregar o estilo — chamar easeTo/fitBounds antes disso é o que travava o mapa.
   useEffect(() => {
-    if (navMode && userLocation && activeFacility && mapRef.current) {
-      const map = mapRef.current.getMap();
-      
-      // Calculate bounding box for route
-      const bounds = new maplibregl.LngLatBounds(
-        [userLocation.lon, userLocation.lat],
-        [userLocation.lon, userLocation.lat]
-      );
-      bounds.extend([activeFacility.lon, activeFacility.lat]);
-      if (routeCoords) {
-        routeCoords.forEach(c => bounds.extend([c[1], c[0]])); // routeCoords are [lat, lon], maplibre wants [lon, lat]
+    if (!navMode || !userLocation || !mapRef.current) return;
+
+    const map = mapRef.current.getMap();
+
+    const moveCamera = () => {
+      try {
+        if (activeFacility && routeCoords && routeCoords.length > 0) {
+          // Mostra a rota inteira rapidinho...
+          const bounds = new maplibregl.LngLatBounds(
+            [userLocation.lon, userLocation.lat],
+            [userLocation.lon, userLocation.lat]
+          );
+          bounds.extend([activeFacility.lon, activeFacility.lat]);
+          routeCoords.forEach(c => bounds.extend([c[1], c[0]]));
+          map.fitBounds(bounds, { padding: 80, pitch: 0, bearing: 0, duration: 1000 });
+        } else {
+          // ...senão, já vai direto pra visão de navegação
+          map.easeTo({ center: [userLocation.lon, userLocation.lat], zoom: 17, pitch: 65, bearing, duration: 1000 });
+        }
+      } catch (err) {
+        console.error('Erro ao mover câmera:', err);
       }
+    };
 
-      map.fitBounds(bounds, {
-        padding: 60,
-        pitch: 65, // Max pitch for waze-like view
-        bearing: 0, // In a real app we'd calculate the bearing between user and destination
-        duration: 2000
-      });
+    if (map.isStyleLoaded()) {
+      moveCamera();
+    } else {
+      map.once('load', moveCamera);
     }
-  }, [navMode, userLocation, activeFacility, routeCoords]);
+  }, [navMode, userLocation, activeFacility, routeCoords, bearing]);
 
-  // Prepare Route GeoJSON
+  // Depois que a rota aparece, espera um instante mostrando o trajeto inteiro
+  // e então muda pra visão "atrás do usuário" (chase cam), tipo Waze.
+  useEffect(() => {
+    if (!navMode || !userLocation || !mapRef.current || !routeCoords) return;
+    const map = mapRef.current.getMap();
+    const t = setTimeout(() => {
+      if (!map.isStyleLoaded()) return;
+      try {
+        map.easeTo({ center: [userLocation.lon, userLocation.lat], zoom: 17, pitch: 65, bearing, duration: 1500 });
+      } catch (err) {
+        console.error('Erro ao mover câmera (chase cam):', err);
+      }
+    }, 1800);
+    return () => clearTimeout(t);
+  }, [navMode, routeCoords]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const routeData = useMemo(() => {
     if (!routeCoords || routeCoords.length === 0) return null;
     return {
@@ -156,16 +197,14 @@ const MapComponent = ({
       properties: {},
       geometry: {
         type: 'LineString',
-        coordinates: routeCoords.map(c => [c[1], c[0]]) // Leaflet is [lat, lon], MapLibre/GeoJSON is [lon, lat]
+        coordinates: routeCoords.map(c => [c[1], c[0]])
       }
     };
   }, [routeCoords]);
 
   const onMoveEnd = (e) => {
     setViewState(e.viewState);
-    if (onMapMove) {
-      onMapMove({ lat: e.viewState.latitude, lon: e.viewState.longitude });
-    }
+    if (onMapMove) onMapMove({ lat: e.viewState.latitude, lon: e.viewState.longitude });
   };
 
   return (
@@ -177,80 +216,48 @@ const MapComponent = ({
         onMoveEnd={onMoveEnd}
         mapStyle={MAP_STYLE}
         mapLib={maplibregl}
-        maxPitch={85} // Allow high pitch for 3D effect
+        maxPitch={85}
         interactiveLayerIds={['facilities-layer']}
       >
         <NavigationControl position="top-right" showCompass={true} />
 
-        {/* User Marker */}
         {userLocation && (
-          <Marker
-            longitude={userLocation.lon}
-            latitude={userLocation.lat}
-            anchor="center"
-            style={{ zIndex: 100 }}
-          >
-            <UserMarkerIcon invisible={invisible} />
+          <Marker longitude={userLocation.lon} latitude={userLocation.lat} anchor="center" style={{ zIndex: 100 }}>
+            <UserMarkerIcon invisible={invisible} bearing={bearing} navMode={navMode} />
           </Marker>
         )}
 
-        {/* Destination Marker (Nav Mode) */}
         {navMode && activeFacility && (
-          <Marker
-            longitude={activeFacility.lon}
-            latitude={activeFacility.lat}
-            anchor="bottom"
-            style={{ zIndex: 90 }}
-          >
+          <Marker longitude={activeFacility.lon} latitude={activeFacility.lat} anchor="bottom" style={{ zIndex: 90 }}>
             <DestinationMarkerIcon color={getTypeColor(activeFacility.type)} />
           </Marker>
         )}
 
-        {/* Facility Markers (Normal Mode) */}
         {!navMode && facilities.map(fac => (
           <Marker
             key={fac.id}
             longitude={fac.lon}
             latitude={fac.lat}
             anchor="bottom"
-            onClick={e => {
-              e.originalEvent.stopPropagation();
-              onFacilitySelect(fac);
-            }}
+            onClick={e => { e.originalEvent.stopPropagation(); onFacilitySelect(fac); }}
           >
             <FacilityMarkerIcon color={getTypeColor(fac.type)} />
           </Marker>
         ))}
 
-        {/* Route Line (Nav Mode) */}
         {navMode && routeData && (
           <Source id="route-source" type="geojson" data={routeData}>
-            {/* Outline/Shadow */}
             <Layer
               id="route-line-bg"
               type="line"
-              layout={{
-                'line-join': 'round',
-                'line-cap': 'round'
-              }}
-              paint={{
-                'line-color': '#1d4ed8',
-                'line-width': 10,
-                'line-opacity': 0.3
-              }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+              paint={{ 'line-color': '#1d4ed8', 'line-width': 14, 'line-opacity': 0.25 }}
             />
-            {/* Main Line */}
             <Layer
               id="route-line"
               type="line"
-              layout={{
-                'line-join': 'round',
-                'line-cap': 'round'
-              }}
-              paint={{
-                'line-color': '#2563EB',
-                'line-width': 6
-              }}
+              layout={{ 'line-join': 'round', 'line-cap': 'round' }}
+              paint={{ 'line-color': '#2563EB', 'line-width': 7 }}
             />
           </Source>
         )}

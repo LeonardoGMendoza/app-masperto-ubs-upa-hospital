@@ -810,7 +810,7 @@ body {
 
 .btn-route {
   flex: 1;
-  background: var(--brand-blue);
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 55%, #1d4ed8 100%);
   color: #fff;
   border: none;
   border-radius: 14px;
@@ -823,9 +823,65 @@ body {
   gap: 8px;
   cursor: pointer;
   font-family: var(--font);
-  transition: background .15s;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(37,99,235,.4), inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform .15s, box-shadow .15s;
 }
-.btn-route:hover { background: #1d4ed8; }
+.btn-route:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(37,99,235,.5), inset 0 1px 0 rgba(255,255,255,.35); }
+.btn-route:active { transform: translateY(0); }
+.btn-route::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.35), transparent);
+  transform: skewX(-20deg);
+  animation: btnShine 3.2s ease-in-out infinite;
+}
+@keyframes btnShine {
+  0%   { left: -60%; }
+  40%  { left: 130%; }
+  100% { left: 130%; }
+}
+
+/* ── Nav mode CTA buttons (glow like Waze) ── */
+.nav-btn-primary, .nav-btn-secondary {
+  padding: 14px;
+  border-radius: 24px;
+  font-weight: 700;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font);
+}
+.nav-btn-secondary {
+  background: #EFF6FF;
+  color: #007AFF;
+}
+.nav-btn-primary {
+  background: linear-gradient(135deg, #38BDF8 0%, #0099FF 55%, #0369A1 100%);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 16px rgba(0,153,255,.45), inset 0 1px 0 rgba(255,255,255,.35);
+  transition: transform .15s, box-shadow .15s;
+}
+.nav-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,153,255,.55), inset 0 1px 0 rgba(255,255,255,.35); }
+.nav-btn-primary:active { transform: translateY(0); }
+.nav-btn-primary::after {
+  content: '';
+  position: absolute;
+  top: 0; left: -60%;
+  width: 40%; height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent);
+  transform: skewX(-20deg);
+  animation: btnShine 3.2s ease-in-out infinite;
+}
 
 .btn-share {
   background: #F3F4F6;
@@ -865,3 +921,77 @@ body {
     bottom: 32px;
   }
 }
+
+/* ══════════════════════════════════════════════
+   NAVIGATION MODE (Waze-style turn-by-turn screen)
+   Estava faltando no CSS — por isso o botão de
+   voltar sumia e o painel de baixo ficava sem estilo.
+══════════════════════════════════════════════ */
+.nav-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 14px;
+  background: linear-gradient(180deg, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 100%);
+}
+
+.nav-back-btn {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  background: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  cursor: pointer;
+  flex-shrink: 0;
+  color: #111827;
+}
+
+.nav-top-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.nav-top-name {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0,0,0,.4);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nav-top-type {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-shadow: 0 1px 4px rgba(0,0,0,.4);
+}
+
+.nav-bottom-panel {
+  background: #fff;
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px 28px;
+  box-shadow: 0 -6px 30px rgba(0,0,0,.18);
+}
+
+.nav-btn-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #F3F4F6;
+  color: #111827;
+  border: none;
+  border-radius: 20px;
+  padding: 12px 20px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-waze-primary { background: linear-gradient(180deg, #33A8FF 0%, #0088FF 100%); color: #FFF; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 16px; border: none; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0, 153, 255, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.3); transition: all 0.2s ease; }
+.btn-waze-primary:active { transform: scale(0.96); box-shadow: 0 2px 5px rgba(0, 153, 255, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.1); }
+.btn-waze-secondary { background: #EFF6FF; color: #007AFF; padding: 14px; border-radius: 24px; font-weight: 700; font-size: 16px; border: none; cursor: pointer; transition: all 0.2s ease; }
+.btn-waze-secondary:active { transform: scale(0.96); background: #E0F0FF; }
