@@ -6,16 +6,18 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // We use Carto Voyager to avoid CORS blocks on iOS Safari that cause the white screen
 const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-// The exact marker image uploaded by the user
+// The exact marker image created purely in CSS to avoid black backgrounds and broken image links
 const UserMarkerIcon = () => (
-  <div style={{
-    width: '40px', height: '56px',
-    backgroundImage: 'url(./custom-marker.png)',
-    backgroundSize: 'contain',
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'center',
-    filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'
-  }}></div>
+  <div className="custom-red-pin">
+    <div className="custom-red-pin-inner">
+      <div className="red-pin-cross"></div>
+      <div className="red-pin-eyes">
+        <div className="red-pin-eye"></div>
+        <div className="red-pin-eye"></div>
+      </div>
+      <div className="red-pin-smile"></div>
+    </div>
+  </div>
 );
 
 // Cute Waze-style pins for the facilities

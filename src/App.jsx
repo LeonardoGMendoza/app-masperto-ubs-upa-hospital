@@ -420,8 +420,17 @@ out center;`;
               </div>
             </div>
 
-            <div className="profile-humor-icon" style={{margin: '-15px auto 10px'}}>
-              <img src="/custom-marker.png" style={{width: 50, height: 70}} alt="Marker" />
+            <div className="profile-humor-icon" style={{margin: '0 auto 20px', display: 'flex', justifyContent: 'center'}}>
+              <div className="custom-red-pin" style={{transform: 'scale(1.2) rotate(-45deg)', margin: '10px 0'}}>
+                <div className="custom-red-pin-inner">
+                  <div className="red-pin-cross"></div>
+                  <div className="red-pin-eyes">
+                    <div className="red-pin-eye"></div>
+                    <div className="red-pin-eye"></div>
+                  </div>
+                  <div className="red-pin-smile"></div>
+                </div>
+              </div>
             </div>
             
             <p style={{fontSize: '0.85rem', color: '#6B7280', margin: '14px 20px 10px'}}>
@@ -530,7 +539,17 @@ out center;`;
         </div>
         <div className="sub-modal-content">
           <div className="sub-modal-banner" style={{paddingBottom: 16}}>
-             <img src={currentUser?.photoURL || '/custom-marker.png'} style={{width: 80, height: 80, borderRadius: '50%'}} alt="Avatar" />
+            {currentUser?.photoURL ? (
+              <img src={currentUser.photoURL} style={{width: 80, height: 80, borderRadius: '50%'}} alt="Avatar" />
+            ) : (
+              <div className="custom-red-pin" style={{transform: 'scale(1.5) rotate(-45deg)', margin: '20px 0'}}>
+                <div className="custom-red-pin-inner">
+                  <div className="red-pin-cross"></div>
+                  <div className="red-pin-eyes"><div className="red-pin-eye"></div><div className="red-pin-eye"></div></div>
+                  <div className="red-pin-smile"></div>
+                </div>
+              </div>
+            )}
           </div>
           <div className="sub-modal-list">
             <div className="sub-modal-list-item">
