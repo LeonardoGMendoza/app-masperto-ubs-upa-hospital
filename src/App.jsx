@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Search, SlidersHorizontal, Navigation2, Building2, X, ChevronRight, 
-  MapPin, Clock, ArrowLeft, Menu, User, Map, Inbox, Settings, HelpCircle, Power
+  MapPin, Clock, ArrowLeft, Menu, User, Map, Inbox, Settings, HelpCircle, Power,
+  Briefcase, Home as HomeIcon, Award, Shield
 } from 'lucide-react';
 import MapComponent from './MapComponent';
-import { auth, loginWithGoogle, logout, addPoints, db } from './firebase';
+import { auth, loginWithGoogle, logout, addPoints, updateUserData, db } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import './App.css';
@@ -36,19 +37,30 @@ function App() {
 
   // ── Firebase Auth & User State ──────────────────────────────────────────────
   const [currentUser, setCurrentUser] = useState(null);
-  const [userData, setUserData] = useState({ points: 0, joinedAt: null });
+  const [userData, setUserData] = useState({ points: 0, joinedAt: null, home: '', work: '' });
+  
+  // Modals state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [homeWorkOpen, setHomeWorkOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [achievementsOpen, setAchievementsOpen] = useState(false);
+
+  // Forms state
+  const [homeInput, setHomeInput] = useState('');
+  const [workInput, setWorkInput] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        // Fetch user data from firestore
         const docRef = doc(db, "users", user.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          setUserData(docSnap.data());
+          const data = docSnap.data();
+          setUserData(data);
+          setHomeInput(data.home || '');
+          setWorkInput(data.work || '');
         }
       }
     });
@@ -58,7 +70,6 @@ function App() {
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
-      // the onAuthStateChanged will handle updating the UI
     } catch (error) {
       console.error(error);
       alert("Erro ao fazer login com o Google.");
@@ -72,6 +83,47 @@ function App() {
       setProfileOpen(false);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const saveHomeWork = async () => {
+    if (!currentUser) { alert("Faça login primeiro."); return; }
+    await updateUserData(currentUser.uid, { home: homeInput, work: workInput });
+    setUserData(prev => ({...prev, home: homeInput, work: workInput}));
+    alert("Salvo com sucesso!");
+  };
+
+  // ── Route to Home or Work ──────────────────────────────────────────────────
+  const routeToPlace = async (placeType) => {
+    const address = placeType === 'home' ? userData.home : userData.work;
+    if (!address) {
+      setHomeWorkOpen(true);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Geocode the address
+      const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+      const data = await resp.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        const pseudoFac = {
+          id: 'custom-' + placeType,
+          name: placeType === 'home' ? 'Casa' : 'Trabalho',
+          type: placeType === 'home' ? 'Residência' : 'Escritório',
+          lat, lon, address
+        };
+        startNav(pseudoFac);
+      } else {
+        alert('Endereço não encontrado pelo GPS. Edite em Perfil > Casa e Trabalho.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao buscar o endereço salvo.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -163,6 +215,7 @@ out center;`;
   const typeColor = (type) => ({
     'Hospital': '#DC2626', 'UPA': '#EA580C', 'UBS': '#2563EB',
     'AMA': '#7C3AED', 'Médico': '#0284C7', 'Clínica': '#0891B2',
+    'Residência': '#059669', 'Escritório': '#D97706'
   }[type] ?? '#2563EB');
 
   const handleSearch = async (e) => {
@@ -204,7 +257,6 @@ out center;`;
           duration: route.duration,
         });
         
-        // Se estiver logado, ganha pontos por iniciar uma rota
         if (currentUser) {
           await addPoints(currentUser.uid, 50);
           setUserData(prev => ({...prev, points: (prev.points || 0) + 50}));
@@ -232,7 +284,6 @@ out center;`;
 
   const openInMaps = () => {
     if (!activeFacility) return;
-    // URL para abrir no app do Waze
     window.open(`https://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}&navigate=yes`, '_blank');
   };
 
@@ -262,7 +313,7 @@ out center;`;
         </div>
       )}
 
-      {/* Hamburger Menu Button (Waze-style) */}
+      {/* Hamburger Menu Button */}
       {!navMode && (
         <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
           <Menu size={24} color="#111827" />
@@ -335,7 +386,7 @@ out center;`;
             <div className="profile-stats">
               <div className="profile-points-label">PONTOS</div>
               <div className="profile-points-value">
-                <img src="/logo.png" alt="coin" style={{borderRadius: 4}} />
+                <Shield size={24} fill="#0ea5e9" color="#0284c7" />
                 {userData.points || 0}
               </div>
               <div className="profile-joined">
@@ -343,12 +394,24 @@ out center;`;
               </div>
             </div>
 
-            <div className="profile-humor-icon">
-              {/* Fake Waze Humor icon using the PerTo Saúde Logo */}
-              <img src="/logo.png" alt="Humor" style={{width: 48, height: 48, borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+            <div className="profile-humor-icon" style={{margin: '-15px auto 10px'}}>
+              {/* CSS Draw of Waze Ghost as the Humor Icon */}
+              <div className="waze-ghost" style={{transform: 'scale(1.3)'}}>
+                <div className="waze-ghost-wheel-left"></div>
+                <div className="waze-ghost-wheel-right"></div>
+                <div className="waze-ghost-face">
+                  <div className="waze-ghost-eyes">
+                    <div className="waze-ghost-eye"></div>
+                    <div className="waze-ghost-eye"></div>
+                  </div>
+                  <div className="waze-ghost-mouth">
+                    <div className="waze-ghost-tongue"></div>
+                  </div>
+                </div>
+              </div>
             </div>
             
-            <p style={{fontSize: '0.85rem', color: '#6B7280', margin: '0 20px 10px'}}>
+            <p style={{fontSize: '0.85rem', color: '#6B7280', margin: '14px 20px 10px'}}>
               Outros motoristas podem ver seu nome de usuário e Humor
             </p>
           </div>
@@ -360,23 +423,29 @@ out center;`;
                 <div style={{width: 20, height: 20, background: '#fff', borderRadius: 10, position: 'absolute', top: 2, left: 2, boxShadow: '0 1px 3px rgba(0,0,0,.2)'}}></div>
               </div>
             </div>
-            <div className="profile-setting-item">
+            <div className="profile-setting-item" onClick={() => setAchievementsOpen(true)}>
               <div className="profile-setting-left">
-                <MapPin size={22} />
-                Conquistas
+                <Award size={22} color="#6B7280" />
+                <div>
+                  <div>Conquistas</div>
+                  <div className="profile-setting-sub">1 novo distintivo</div>
+                </div>
               </div>
-              <ChevronRight size={20} color="#D1D5DB" />
+              <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                <div className="dot" style={{width: 8, height: 8, background: '#EF4444', borderRadius: 4}}></div>
+                <ChevronRight size={20} color="#D1D5DB" />
+              </div>
             </div>
-            <div className="profile-setting-item">
+            <div className="profile-setting-item" onClick={() => setAccountOpen(true)}>
               <div className="profile-setting-left">
-                <User size={22} />
+                <User size={22} color="#6B7280" />
                 Conta e login
               </div>
               <ChevronRight size={20} color="#D1D5DB" />
             </div>
-            <div className="profile-setting-item">
+            <div className="profile-setting-item" onClick={() => setHomeWorkOpen(true)}>
               <div className="profile-setting-left">
-                <Building2 size={22} />
+                <HomeIcon size={22} color="#6B7280" />
                 Casa e trabalho
               </div>
               <ChevronRight size={20} color="#D1D5DB" />
@@ -384,6 +453,133 @@ out center;`;
           </div>
         </div>
       </div>
+
+      {/* ── Sub Modals (Home/Work, Account, Achievements) ── */}
+
+      {/* Home & Work Modal */}
+      <div className={`sub-modal ${homeWorkOpen ? 'open' : ''}`}>
+        <div className="sub-modal-header">
+          <button className="close-btn" style={{ background: 'transparent' }} onClick={() => setHomeWorkOpen(false)}>
+            <ArrowLeft size={24} color="#111827" />
+          </button>
+          <div className="sub-modal-title">Casa e trabalho</div>
+        </div>
+        <div className="sub-modal-content">
+          <div className="sub-modal-banner">
+            <h3>O PerTo te dá cobertura</h3>
+            <p>Receba atualizações personalizadas configurando sua casa e trabalho.</p>
+          </div>
+          <div className="sub-modal-list">
+            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}}>
+              <div style={{display: 'flex', gap: 16, alignItems: 'center'}}>
+                <HomeIcon size={24} className="sub-modal-list-icon" />
+                <div className="sub-modal-list-text">
+                  <div className="sub-modal-list-title">Casa</div>
+                  <div className="sub-modal-list-desc">{userData.home || 'Toque para adicionar'}</div>
+                </div>
+              </div>
+              <input 
+                className="sub-modal-input" 
+                placeholder="Ex: Rua A, 123 - São Paulo"
+                value={homeInput} onChange={e => setHomeInput(e.target.value)}
+              />
+            </div>
+            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}}>
+              <div style={{display: 'flex', gap: 16, alignItems: 'center'}}>
+                <Briefcase size={24} className="sub-modal-list-icon" />
+                <div className="sub-modal-list-text">
+                  <div className="sub-modal-list-title">Trabalho</div>
+                  <div className="sub-modal-list-desc">{userData.work || 'Toque para adicionar'}</div>
+                </div>
+              </div>
+              <input 
+                className="sub-modal-input" 
+                placeholder="Ex: Av Paulista, 1000 - São Paulo"
+                value={workInput} onChange={e => setWorkInput(e.target.value)}
+              />
+            </div>
+          </div>
+          <div style={{padding: '0 20px'}}>
+            <button className="sidebar-login-btn" onClick={saveHomeWork}>Salvar Endereços</button>
+          </div>
+        </div>
+      </div>
+
+      {/* Account & Login Modal */}
+      <div className={`sub-modal ${accountOpen ? 'open' : ''}`}>
+        <div className="sub-modal-header">
+          <button className="close-btn" style={{ background: 'transparent' }} onClick={() => setAccountOpen(false)}>
+            <ArrowLeft size={24} color="#111827" />
+          </button>
+          <div className="sub-modal-title">Conta e login</div>
+        </div>
+        <div className="sub-modal-content">
+          <div className="sub-modal-banner" style={{paddingBottom: 16}}>
+             <img src={currentUser?.photoURL || '/logo.png'} style={{width: 80, height: 80, borderRadius: '50%'}} alt="Avatar" />
+          </div>
+          <div className="sub-modal-list">
+            <div className="sub-modal-list-item">
+              <div className="sub-modal-list-text">
+                <div className="sub-modal-list-title">Nome completo</div>
+                <div className="sub-modal-list-desc">{currentUser?.displayName || 'Convidado'}</div>
+              </div>
+            </div>
+          </div>
+          <div style={{padding: '16px 20px', fontSize: '0.85rem', color: '#6B7280', fontWeight: 600}}>Dados de acesso</div>
+          <div className="sub-modal-list">
+            <div className="sub-modal-list-item">
+              <div className="sub-modal-list-icon">
+                <Shield size={24} color="#34A853" fill="#E8F5E9"/>
+              </div>
+              <div className="sub-modal-list-text">
+                <div className="sub-modal-list-title">E-mail (Google)</div>
+                <div className="sub-modal-list-desc">{currentUser?.email || 'Faça login para ver'}</div>
+              </div>
+            </div>
+            <div className="sub-modal-list-item">
+              <div className="sub-modal-list-text">
+                <div className="sub-modal-list-title">Data de nascimento</div>
+                <div className="sub-modal-list-desc">1 de janeiro de 1970</div>
+              </div>
+              <div className="sub-modal-list-action">Editar</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Achievements Modal */}
+      <div className={`sub-modal ${achievementsOpen ? 'open' : ''}`}>
+        <div className="sub-modal-header">
+          <button className="close-btn" style={{ background: 'transparent' }} onClick={() => setAchievementsOpen(false)}>
+            <ArrowLeft size={24} color="#111827" />
+          </button>
+          <div className="sub-modal-title">Conquistas</div>
+        </div>
+        <div className="sub-modal-content">
+          <div className="achievements-level">
+            <div className="achievements-level-title">Nível</div>
+            <div className="achievements-level-name">Waze Adulto</div>
+            <div className="achievements-badges">
+              <Shield size={48} className="achievements-badge" color="#9CA3AF" />
+              <Award size={48} className="achievements-badge active" color="#2563EB" />
+              <Shield size={48} className="achievements-badge" color="#9CA3AF" />
+              <Award size={48} className="achievements-badge" color="#9CA3AF" />
+            </div>
+          </div>
+          
+          <div className="stats-row">
+            <div className="stats-col">
+              <div className="stats-col-val">{userData.points ? Math.floor(userData.points / 50) : 0}</div>
+              <div className="stats-col-lbl">Rotas Feitas</div>
+            </div>
+            <div className="stats-col">
+              <div className="stats-col-val">{userData.points || 0}</div>
+              <div className="stats-col-lbl">Pontos Totais</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       {/* Map (now using MapLibre) */}
       <MapComponent
@@ -462,18 +658,11 @@ out center;`;
       {!navMode && (
         <>
           <div className="top-bar">
-            <div className="app-logo-bar">
-              <img src="/logo.png" alt="PerTo Saúde" className="app-logo-img" />
-              <div className="app-logo-text">
-                <span className="app-logo-name">PerTo <span style={{color:'#2563EB'}}>Saúde</span></span>
-                <span className="app-logo-tagline">Saúde perto de você</span>
-              </div>
-            </div>
             <div className="search-bar">
               <Search size={18} color="#6B7280" />
               <input 
                 type="text" 
-                placeholder="Buscar local (ex: Itaquera, SP)" 
+                placeholder="Para onde?" 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearch}
@@ -481,9 +670,19 @@ out center;`;
               <div className="divider" />
               <button className="filter-icon-btn"><SlidersHorizontal size={18} color="#2563EB" /></button>
             </div>
+
+            {/* Quick Home / Work Buttons */}
+            <div className="quick-buttons-row">
+              <div className="quick-btn" onClick={() => routeToPlace('home')}>
+                <HomeIcon size={18} /> Casa
+              </div>
+              <div className="quick-btn" onClick={() => routeToPlace('work')}>
+                <Briefcase size={18} style={{color: '#D97706'}} /> Trabalho
+              </div>
+            </div>
           </div>
 
-          <div className={`search-area-wrap ${!showSearchBtn ? 'hidden' : ''}`}>
+          <div className={`search-area-wrap ${!showSearchBtn ? 'hidden' : ''}`} style={{top: 140}}>
             <button className="search-area-btn" onClick={searchNewArea}>
               <MapPin size={15} /> Buscar nesta área
             </button>
@@ -540,44 +739,13 @@ out center;`;
                 </div>
                 <div className="detail-actions">
                   <button className="btn-route" onClick={() => startNav(activeFacility)}>
-                    <Navigation2 size={18} /> Traçar Rota
+                    <Navigation2 size={18} /> Ir agora
                   </button>
                   <button className="btn-share" onClick={() => {
-                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://maps.google.com/?q=${activeFacility.lat},${activeFacility.lon}`;
+                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}`;
                     navigator.share ? navigator.share({ text }) : navigator.clipboard.writeText(text);
                   }}>Compartilhar</button>
                 </div>
-              </div>
-            </div>
-          )}
-
-          {!detailOpen && (
-            <div className="bottom-sheet">
-              <div className="sheet-handle" />
-              <div className="sheet-label">UNIDADES PRÓXIMAS · {facilities.length} encontradas</div>
-              <div className="facility-list">
-                {facilities.length === 0 && !loading && (
-                  <p className="empty-msg">Nenhuma unidade encontrada. Arraste o mapa e toque em "Buscar nesta área".</p>
-                )}
-                {facilities.map(fac => (
-                  <div
-                    key={fac.id}
-                    className={`facility-card ${activeFacility?.id === fac.id ? 'fc-active' : ''}`}
-                    onClick={() => openDetail(fac)}
-                  >
-                    <div className="fc-icon" style={{ background: typeColor(fac.type) + '18', color: typeColor(fac.type) }}>
-                      <Building2 size={18} />
-                    </div>
-                    <div className="fc-info">
-                      <div className="fc-name">{fac.name}</div>
-                      <div className="fc-type" style={{ color: typeColor(fac.type) }}>{fac.type}</div>
-                    </div>
-                    <div className="fc-right">
-                      <div className="fc-dist">{fmtDist(fac.distance)}</div>
-                      <ChevronRight size={16} color="#D1D5DB" />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}

@@ -178,6 +178,153 @@
   .top-bar { left: 80px; } /* Space for hamburger */
 }
 
+/* ══════════════════════════════════════════════
+   WAZE GHOST ICON (CSS DRAWING)
+══════════════════════════════════════════════ */
+.waze-ghost {
+  position: relative;
+  width: 44px; height: 40px;
+  background: #FFB3BA; /* Pink color */
+  border-radius: 22px 22px 10px 10px;
+  border: 3px solid #000;
+  display: flex; justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  z-index: 100;
+}
+/* The ghost tail on the left */
+.waze-ghost::before {
+  content: '';
+  position: absolute;
+  left: -8px; bottom: 8px;
+  width: 14px; height: 14px;
+  background: #FFB3BA;
+  border-radius: 50%;
+  border-left: 3px solid #000;
+  border-bottom: 3px solid #000;
+}
+/* The wheels */
+.waze-ghost-wheel-left, .waze-ghost-wheel-right {
+  position: absolute;
+  bottom: -6px;
+  width: 14px; height: 14px;
+  background: #000;
+  border-radius: 50%;
+}
+.waze-ghost-wheel-left { left: 4px; }
+.waze-ghost-wheel-right { right: 4px; }
+/* The face (eyes and mouth) */
+.waze-ghost-face {
+  position: absolute;
+  top: 10px; left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center;
+}
+.waze-ghost-eyes {
+  display: flex; gap: 8px;
+}
+.waze-ghost-eye {
+  width: 8px; height: 4px;
+  border-top: 2px solid #000;
+  border-radius: 50% 50% 0 0;
+}
+.waze-ghost-mouth {
+  width: 20px; height: 14px;
+  background: #800000; /* dark red */
+  border: 2px solid #000;
+  border-radius: 2px 2px 14px 14px;
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.waze-ghost-tongue {
+  position: absolute;
+  bottom: -2px; left: 2px;
+  width: 12px; height: 8px;
+  background: #FF6B6B;
+  border-radius: 50% 50% 0 0;
+}
+
+/* ══════════════════════════════════════════════
+   FULL SCREEN MODALS (Home/Work, Account, Achvs)
+══════════════════════════════════════════════ */
+.sub-modal {
+  position: fixed; inset: 0;
+  background: #F3F4F6;
+  z-index: 1400;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.sub-modal.open { transform: translateX(0); }
+
+.sub-modal-header {
+  background: #fff;
+  padding: 16px;
+  display: flex; align-items: center; gap: 16px;
+  border-bottom: 1px solid #E5E7EB;
+}
+.sub-modal-title { font-size: 1.15rem; font-weight: 800; color: #111827; }
+.sub-modal-content { flex: 1; overflow-y: auto; }
+
+.sub-modal-banner {
+  background: #fff; padding: 24px; text-align: center;
+  border-bottom: 1px solid #E5E7EB; margin-bottom: 16px;
+}
+.sub-modal-banner-img { width: 120px; margin-bottom: 16px; }
+.sub-modal-banner h3 { font-size: 1.3rem; font-weight: 800; margin-bottom: 8px; }
+.sub-modal-banner p { font-size: 0.9rem; color: #6B7280; line-height: 1.4; }
+
+.sub-modal-list { background: #fff; border-top: 1px solid #E5E7EB; border-bottom: 1px solid #E5E7EB; }
+.sub-modal-list-item {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px; border-bottom: 1px solid #F3F4F6;
+}
+.sub-modal-list-item:last-child { border-bottom: none; }
+.sub-modal-list-icon { color: #6B7280; }
+.sub-modal-list-text { flex: 1; }
+.sub-modal-list-title { font-weight: 700; font-size: 1rem; color: #111827; }
+.sub-modal-list-desc { font-size: 0.85rem; color: #6B7280; margin-top: 4px; }
+.sub-modal-list-action { color: #2563EB; font-weight: 600; font-size: 0.9rem; cursor: pointer;}
+.sub-modal-input {
+  width: 100%; border: 1px solid #D1D5DB; border-radius: 8px;
+  padding: 10px; font-family: var(--font); font-size: 1rem;
+  margin-top: 8px; outline: none;
+}
+.sub-modal-save-btn {
+  background: #2563EB; color: #fff; border: none;
+  padding: 8px 16px; border-radius: 8px; font-weight: 600; cursor: pointer;
+  margin-top: 8px;
+}
+
+/* Achievements Specific */
+.achievements-level {
+  background: #fff; padding: 24px; text-align: center; border-bottom: 1px solid #E5E7EB; margin-bottom: 16px;
+}
+.achievements-level-title { font-size: 0.9rem; color: #6B7280; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+.achievements-level-name { font-size: 1.8rem; font-weight: 800; color: #111827; margin-bottom: 24px;}
+.achievements-badges { display: flex; justify-content: center; gap: 12px; }
+.achievements-badge { width: 48px; height: 48px; opacity: 0.4; filter: grayscale(1); }
+.achievements-badge.active { opacity: 1; filter: grayscale(0); }
+
+.stats-row {
+  display: flex; background: #fff; padding: 24px 0; border-bottom: 1px solid #E5E7EB; margin-bottom: 16px;
+}
+.stats-col { flex: 1; text-align: center; border-right: 1px solid #E5E7EB; }
+.stats-col:last-child { border-right: none; }
+.stats-col-val { font-size: 2rem; font-weight: 800; color: #111827; }
+.stats-col-lbl { font-size: 0.8rem; color: #6B7280; font-weight: 600; text-transform: uppercase; margin-top: 4px; }
+
+/* Quick Buttons (Home/Work under search) */
+.quick-buttons-row {
+  display: flex; gap: 10px; margin-top: 12px;
+}
+.quick-btn {
+  flex: 1; background: #fff; border: 1px solid #E5E7EB; border-radius: 16px;
+  padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-weight: 700; font-size: 0.95rem; color: #111827; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  cursor: pointer;
+}
+.quick-btn svg { color: #EF4444; }
+
 
 :root {
   --brand-blue: #2563EB;

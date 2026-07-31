@@ -10,9 +10,9 @@ const MAP_STYLE = {
     'waze-tiles': {
       type: 'raster',
       tiles: [
-        'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles2.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles3.waze.com/tiles/{z}/{x}/{y}.png'
+        'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
       ],
       tileSize: 256,
       attribution: '© Waze'
@@ -31,11 +31,19 @@ const MAP_STYLE = {
 
 // We'll create simple HTML markers instead of the old Leaflet divIcons
 const UserMarkerIcon = () => (
-  <div style={{
-    width: 24, height: 24, background: '#2563EB', border: '3px solid #fff',
-    borderRadius: '50%', boxShadow: '0 0 15px rgba(37,99,235,0.8)',
-    animation: 'pulse 2s infinite'
-  }}></div>
+  <div className="waze-ghost">
+    <div className="waze-ghost-wheel-left"></div>
+    <div className="waze-ghost-wheel-right"></div>
+    <div className="waze-ghost-face">
+      <div className="waze-ghost-eyes">
+        <div className="waze-ghost-eye"></div>
+        <div className="waze-ghost-eye"></div>
+      </div>
+      <div className="waze-ghost-mouth">
+        <div className="waze-ghost-tongue"></div>
+      </div>
+    </div>
+  </div>
 );
 
 const FacilityMarkerIcon = ({ color }) => (

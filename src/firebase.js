@@ -53,3 +53,10 @@ export const addPoints = async (uid, amount) => {
   const userRef = doc(db, "users", uid);
   await setDoc(userRef, { points: increment(amount) }, { merge: true });
 };
+
+// Function to update user data (e.g. Home and Work addresses)
+export const updateUserData = async (uid, data) => {
+  if (!uid) return;
+  const userRef = doc(db, "users", uid);
+  await setDoc(userRef, data, { merge: true });
+};
