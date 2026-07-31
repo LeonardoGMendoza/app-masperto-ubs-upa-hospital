@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react'
-import { Search, SlidersHorizontal, Navigation2, Building2, X, ChevronRight, MapPin, Clock, ArrowLeft, Car } from 'lucide-react'
-import MapComponent from './MapComponent'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, SlidersHorizontal, Navigation2, Building2, X, ChevronRight, 
+  MapPin, Clock, ArrowLeft, Menu, User, Map, Inbox, Settings, HelpCircle, Power
+} from 'lucide-react';
+import MapComponent from './MapComponent';
+import { auth, loginWithGoogle, logout, addPoints, db } from './firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import './App.css';
 
 // ── Zona Leste fallback data ──────────────────────────────────────────────────
 const FALLBACK = [
@@ -15,45 +21,87 @@ const FALLBACK = [
   { id: 9008, name: 'UBS Pedro de Souza Campos', type: 'UBS', lat: -23.503142, lon: -46.4839706, address: 'São Paulo – SP' },
   { id: 9009, name: 'UPA Penha', type: 'UPA', lat: -23.5199, lon: -46.5309, address: 'Penha, São Paulo – SP' },
   { id: 9010, name: 'AMA/UBS Jardim Nordeste', type: 'AMA', lat: -23.5064, lon: -46.4715, address: 'Jardim Nordeste, São Paulo – SP' },
-]
+];
 
 function App() {
-  const [userLocation, setUserLocation] = useState(null)
-  const [facilities, setFacilities] = useState([])
-  const [activeFacility, setActiveFacility] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [mapCenter, setMapCenter] = useState(null)
-  const [showSearchBtn, setShowSearchBtn] = useState(false)
-  const [currentSearchCenter, setCurrentSearchCenter] = useState(null)
-  const [detailOpen, setDetailOpen] = useState(false)
+  const [userLocation, setUserLocation] = useState(null);
+  const [facilities, setFacilities] = useState([]);
+  const [activeFacility, setActiveFacility] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mapCenter, setMapCenter] = useState(null);
+  const [showSearchBtn, setShowSearchBtn] = useState(false);
+  const [currentSearchCenter, setCurrentSearchCenter] = useState(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // ── Firebase Auth & User State ──────────────────────────────────────────────
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userData, setUserData] = useState({ points: 0, joinedAt: null });
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        // Fetch user data from firestore
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+      // the onAuthStateChanged will handle updating the UI
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao fazer login com o Google.");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setSidebarOpen(false);
+      setProfileOpen(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   // ── Navigation mode state ──────────────────────────────────────────────────
-  const [navMode, setNavMode] = useState(false)
-  const [routeCoords, setRouteCoords] = useState(null)
-  const [routeInfo, setRouteInfo] = useState(null) // { distance, duration }
-  const [routeLoading, setRouteLoading] = useState(false)
+  const [navMode, setNavMode] = useState(false);
+  const [routeCoords, setRouteCoords] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const [routeLoading, setRouteLoading] = useState(false);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude }
-          setUserLocation(loc); setCurrentSearchCenter(loc)
-          fetchFacilities(loc.lat, loc.lon, loc)
+          const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          setUserLocation(loc); setCurrentSearchCenter(loc);
+          fetchFacilities(loc.lat, loc.lon, loc);
         },
         () => {
-          const loc = { lat: -23.5413, lon: -46.4496 }
-          setUserLocation(loc); setCurrentSearchCenter(loc)
-          fetchFacilities(loc.lat, loc.lon, loc)
+          const loc = { lat: -23.5413, lon: -46.4496 };
+          setUserLocation(loc); setCurrentSearchCenter(loc);
+          fetchFacilities(loc.lat, loc.lon, loc);
         },
         { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
-      )
-    } else { setLoading(false) }
-  }, [])
+      );
+    } else { setLoading(false); }
+  }, []);
 
   const fetchFacilities = async (lat, lon, refLoc) => {
-    setLoading(true); setShowSearchBtn(false)
-    const radius = 8000
+    setLoading(true); setShowSearchBtn(false);
+    const radius = 8000;
     const query = `[out:json][timeout:30];
 (
   node["amenity"~"hospital|clinic|doctors|health_post"](around:${radius},${lat},${lon});
@@ -61,118 +109,145 @@ function App() {
   node["healthcare"~"hospital|clinic|centre|doctor"](around:${radius},${lat},${lon});
   way["healthcare"~"hospital|clinic|centre|doctor"](around:${radius},${lat},${lon});
 );
-out center;`
+out center;`;
     try {
       const resp = await fetch('https://overpass-api.de/api/interpreter', {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain', 'User-Agent': 'PerToSaude/1.0' },
         body: query
-      })
-      const data = await resp.json()
-      const refLat = refLoc?.lat ?? lat; const refLon = refLoc?.lon ?? lon
-      const seen = new Set()
+      });
+      const data = await resp.json();
+      const refLat = refLoc?.lat ?? lat; const refLon = refLoc?.lon ?? lon;
+      const seen = new Set();
       const items = data.elements.filter(el => {
-        if (!el.tags?.name) return false
-        if (seen.has(el.tags.name)) return false
-        seen.add(el.tags.name); return true
+        if (!el.tags?.name) return false;
+        if (seen.has(el.tags.name)) return false;
+        seen.add(el.tags.name); return true;
       }).map(el => {
-        const elLat = el.lat ?? el.center?.lat; const elLon = el.lon ?? el.center?.lon
-        if (!elLat || !elLon) return null
-        const dist = calcDist(refLat, refLon, elLat, elLon)
-        let type = 'Clínica'
-        const amenity = el.tags.amenity || ''; const hc = el.tags.healthcare || ''
-        if (amenity === 'hospital' || hc === 'hospital') type = 'Hospital'
-        else if (el.tags.name?.match(/UPA/i)) type = 'UPA'
-        else if (el.tags.name?.match(/UBS|UBSF|USF|Unidade B/i)) type = 'UBS'
-        else if (el.tags.name?.match(/AMA\b/i)) type = 'AMA'
-        else if (amenity === 'doctors') type = 'Médico'
-        const street = el.tags['addr:street']
-        const num = el.tags['addr:housenumber']
-        return { id: el.id, name: el.tags.name, type, lat: elLat, lon: elLon, distance: dist, address: street ? `${street}${num ? ', ' + num : ''} – SP` : 'São Paulo – SP' }
-      }).filter(Boolean).sort((a, b) => a.distance - b.distance).slice(0, 60)
-      setFacilities(items.length > 0 ? items : withDist(FALLBACK, refLat, refLon))
-    } catch { setFacilities(withDist(FALLBACK, lat, lon)) }
-    finally { setLoading(false) }
-  }
+        const elLat = el.lat ?? el.center?.lat; const elLon = el.lon ?? el.center?.lon;
+        if (!elLat || !elLon) return null;
+        const dist = calcDist(refLat, refLon, elLat, elLon);
+        let type = 'Clínica';
+        const amenity = el.tags.amenity || ''; const hc = el.tags.healthcare || '';
+        if (amenity === 'hospital' || hc === 'hospital') type = 'Hospital';
+        else if (el.tags.name?.match(/UPA/i)) type = 'UPA';
+        else if (el.tags.name?.match(/UBS|UBSF|USF|Unidade B/i)) type = 'UBS';
+        else if (el.tags.name?.match(/AMA\b/i)) type = 'AMA';
+        else if (amenity === 'doctors') type = 'Médico';
+        const street = el.tags['addr:street'];
+        const num = el.tags['addr:housenumber'];
+        return { id: el.id, name: el.tags.name, type, lat: elLat, lon: elLon, distance: dist, address: street ? `${street}${num ? ', ' + num : ''} – SP` : 'São Paulo – SP' };
+      }).filter(Boolean).sort((a, b) => a.distance - b.distance).slice(0, 60);
+      setFacilities(items.length > 0 ? items : withDist(FALLBACK, refLat, refLon));
+    } catch { setFacilities(withDist(FALLBACK, lat, lon)); }
+    finally { setLoading(false); }
+  };
 
   const withDist = (arr, lat, lon) =>
-    arr.map(f => ({ ...f, distance: calcDist(lat, lon, f.lat, f.lon) })).sort((a, b) => a.distance - b.distance)
+    arr.map(f => ({ ...f, distance: calcDist(lat, lon, f.lat, f.lon) })).sort((a, b) => a.distance - b.distance);
 
   const calcDist = (lat1, lon1, lat2, lon2) => {
-    const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  }
+    const R = 6371, dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
 
-  const fmtDist = d => d < 1 ? `${(d * 1000).toFixed(0)} m` : `${d.toFixed(1)} km`
+  const fmtDist = d => d < 1 ? `${(d * 1000).toFixed(0)} m` : `${d.toFixed(1)} km`;
 
   const fmtDuration = (secs) => {
-    const mins = Math.round(secs / 60)
-    if (mins < 60) return `${mins} min`
-    return `${Math.floor(mins / 60)}h ${mins % 60}min`
-  }
+    const mins = Math.round(secs / 60);
+    if (mins < 60) return `${mins} min`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}min`;
+  };
 
   const typeColor = (type) => ({
     'Hospital': '#DC2626', 'UPA': '#EA580C', 'UBS': '#2563EB',
     'AMA': '#7C3AED', 'Médico': '#0284C7', 'Clínica': '#0891B2',
-  }[type] ?? '#2563EB')
+  }[type] ?? '#2563EB');
 
-  // ── Fetch route from OSRM (free, OpenStreetMap routing) ───────────────────
+  const handleSearch = async (e) => {
+    if (e.key === 'Enter' && searchQuery.trim() !== '') {
+      setLoading(true);
+      try {
+        const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
+        const data = await resp.json();
+        if (data && data.length > 0) {
+          const loc = { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+          setUserLocation(loc);
+          setCurrentSearchCenter(loc);
+          fetchFacilities(loc.lat, loc.lon, loc);
+        } else {
+          alert('Local não encontrado.');
+        }
+      } catch (e) {
+        console.error('Search error:', e);
+        alert('Erro ao buscar local.');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
   const fetchRoute = async (fac) => {
-    if (!userLocation) return
-    setRouteLoading(true)
+    if (!userLocation) return;
+    setRouteLoading(true);
     try {
-      const url = `https://router.project-osrm.org/route/v1/driving/${userLocation.lon},${userLocation.lat};${fac.lon},${fac.lat}?overview=full&geometries=geojson`
-      const resp = await fetch(url)
-      const data = await resp.json()
+      const url = `https://router.project-osrm.org/route/v1/driving/${userLocation.lon},${userLocation.lat};${fac.lon},${fac.lat}?overview=full&geometries=geojson`;
+      const resp = await fetch(url);
+      const data = await resp.json();
       if (data.routes && data.routes.length > 0) {
-        const route = data.routes[0]
-        // Convert GeoJSON [lon, lat] → Leaflet [lat, lon]
-        const coords = route.geometry.coordinates.map(([lon, lat]) => [lat, lon])
-        setRouteCoords(coords)
+        const route = data.routes[0];
+        const coords = route.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+        setRouteCoords(coords);
         setRouteInfo({
-          distance: route.distance,  // in meters
-          duration: route.duration,  // in seconds
-        })
+          distance: route.distance,
+          duration: route.duration,
+        });
+        
+        // Se estiver logado, ganha pontos por iniciar uma rota
+        if (currentUser) {
+          await addPoints(currentUser.uid, 50);
+          setUserData(prev => ({...prev, points: (prev.points || 0) + 50}));
+        }
       }
     } catch (e) {
-      console.error('Route fetch error:', e)
+      console.error('Route fetch error:', e);
     } finally {
-      setRouteLoading(false)
+      setRouteLoading(false);
     }
-  }
+  };
 
-  // ── Start navigation mode ──────────────────────────────────────────────────
   const startNav = async (fac) => {
-    setActiveFacility(fac)
-    setDetailOpen(false)
-    setNavMode(true)
-    await fetchRoute(fac)
-  }
+    setActiveFacility(fac);
+    setDetailOpen(false);
+    setNavMode(true);
+    await fetchRoute(fac);
+  };
 
   const exitNav = () => {
-    setNavMode(false)
-    setRouteCoords(null)
-    setRouteInfo(null)
-  }
+    setNavMode(false);
+    setRouteCoords(null);
+    setRouteInfo(null);
+  };
 
   const openInMaps = () => {
-    if (!activeFacility) return
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${activeFacility.lat},${activeFacility.lon}`, '_blank')
-  }
+    if (!activeFacility) return;
+    // URL para abrir no app do Waze
+    window.open(`https://waze.com/ul?ll=${activeFacility.lat},${activeFacility.lon}&navigate=yes`, '_blank');
+  };
 
-  const openDetail = (fac) => { setActiveFacility(fac); setDetailOpen(true) }
-  const closeDetail = () => setDetailOpen(false)
+  const openDetail = (fac) => { setActiveFacility(fac); setDetailOpen(true); };
+  const closeDetail = () => setDetailOpen(false);
 
   const handleMapMove = (c) => {
-    setMapCenter(c)
+    setMapCenter(c);
     if (currentSearchCenter && calcDist(currentSearchCenter.lat, currentSearchCenter.lon, c.lat, c.lon) > 2)
-      setShowSearchBtn(true)
-  }
+      setShowSearchBtn(true);
+  };
 
   const searchNewArea = () => {
-    if (mapCenter) { setCurrentSearchCenter(mapCenter); fetchFacilities(mapCenter.lat, mapCenter.lon, mapCenter) }
-  }
+    if (mapCenter) { setCurrentSearchCenter(mapCenter); fetchFacilities(mapCenter.lat, mapCenter.lon, mapCenter); }
+  };
 
   return (
     <div className="app-container">
@@ -182,12 +257,135 @@ out center;`
         <div className="loading-overlay">
           <div className="loading-card">
             <div className="spinner" />
-            <p>{routeLoading ? 'Calculando rota…' : 'Buscando unidades de saúde…'}</p>
+            <p>{routeLoading ? 'Calculando rota…' : 'Carregando mapa…'}</p>
           </div>
         </div>
       )}
 
-      {/* Map */}
+      {/* Hamburger Menu Button (Waze-style) */}
+      {!navMode && (
+        <button className="hamburger-btn" onClick={() => setSidebarOpen(true)}>
+          <Menu size={24} color="#111827" />
+          {!currentUser && <div className="hamburger-dot" />}
+        </button>
+      )}
+
+      {/* Sidebar Overlay & Menu */}
+      <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)} />
+      <div className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-header">
+          <button className="sidebar-close" onClick={() => setSidebarOpen(false)}><X size={24} /></button>
+          {currentUser ? (
+            <div className="sidebar-user">
+              <img src={currentUser.photoURL} alt="Avatar" className="sidebar-avatar" />
+              <div className="sidebar-user-info">
+                <div className="sidebar-username">{currentUser.displayName}</div>
+                <button className="sidebar-profile-btn" onClick={() => setProfileOpen(true)}>Ver perfil</button>
+              </div>
+            </div>
+          ) : (
+            <div className="sidebar-user">
+              <div className="sidebar-avatar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F3F4F6' }}>
+                <User size={28} color="#9CA3AF" />
+              </div>
+              <div className="sidebar-user-info">
+                <div className="sidebar-username">Olá, Convidado</div>
+                <button className="sidebar-login-btn" onClick={handleLogin}>
+                  Login com Google
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="sidebar-menu">
+          <div className="sidebar-item" onClick={() => setSidebarOpen(false)}>
+            <Map size={22} /> Planejar percurso
+          </div>
+          <div className="sidebar-item">
+            <Inbox size={22} /> Caixa de entrada <div className="dot" />
+          </div>
+          <div className="sidebar-item">
+            <Settings size={22} /> Configurações
+          </div>
+          <div className="sidebar-item">
+            <HelpCircle size={22} /> Ajuda e comentários
+          </div>
+          {currentUser && (
+            <div className="sidebar-item" onClick={handleLogout} style={{color: '#DC2626'}}>
+              <Power size={22} color="#DC2626" /> Sair
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Profile Modal */}
+      <div className={`profile-modal ${profileOpen ? 'open' : ''}`}>
+        <div className="profile-top">
+          <button className="close-btn" style={{ background: 'transparent' }} onClick={() => setProfileOpen(false)}>
+            <ArrowLeft size={24} color="#111827" />
+          </button>
+          <h2>Perfil</h2>
+          <div style={{width: 24}}></div>
+        </div>
+        <div className="profile-content">
+          <div className="profile-card">
+            {currentUser && <img src={currentUser.photoURL} alt="Avatar" className="profile-card-avatar" />}
+            <h3>{currentUser?.displayName}</h3>
+            
+            <div className="profile-stats">
+              <div className="profile-points-label">PONTOS</div>
+              <div className="profile-points-value">
+                <img src="/logo.png" alt="coin" style={{borderRadius: 4}} />
+                {userData.points || 0}
+              </div>
+              <div className="profile-joined">
+                Juntou-se em {userData.joinedAt ? new Date(userData.joinedAt).getFullYear() : new Date().getFullYear()}
+              </div>
+            </div>
+
+            <div className="profile-humor-icon">
+              {/* Fake Waze Humor icon using the PerTo Saúde Logo */}
+              <img src="/logo.png" alt="Humor" style={{width: 48, height: 48, borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)'}} />
+            </div>
+            
+            <p style={{fontSize: '0.85rem', color: '#6B7280', margin: '0 20px 10px'}}>
+              Outros motoristas podem ver seu nome de usuário e Humor
+            </p>
+          </div>
+
+          <div className="profile-settings-list">
+            <div className="profile-setting-item">
+              Ficar invisível
+              <div style={{width: 44, height: 24, background: '#E5E7EB', borderRadius: 12, position: 'relative'}}>
+                <div style={{width: 20, height: 20, background: '#fff', borderRadius: 10, position: 'absolute', top: 2, left: 2, boxShadow: '0 1px 3px rgba(0,0,0,.2)'}}></div>
+              </div>
+            </div>
+            <div className="profile-setting-item">
+              <div className="profile-setting-left">
+                <MapPin size={22} />
+                Conquistas
+              </div>
+              <ChevronRight size={20} color="#D1D5DB" />
+            </div>
+            <div className="profile-setting-item">
+              <div className="profile-setting-left">
+                <User size={22} />
+                Conta e login
+              </div>
+              <ChevronRight size={20} color="#D1D5DB" />
+            </div>
+            <div className="profile-setting-item">
+              <div className="profile-setting-left">
+                <Building2 size={22} />
+                Casa e trabalho
+              </div>
+              <ChevronRight size={20} color="#D1D5DB" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Map (now using MapLibre) */}
       <MapComponent
         userLocation={userLocation}
         facilities={facilities}
@@ -202,7 +400,6 @@ out center;`
       {/* ═══════════════ NAVIGATION MODE (Screen 3 - Waze style) ═══════════════ */}
       {navMode && (
         <>
-          {/* Top nav bar */}
           <div className="nav-top-bar">
             <button className="nav-back-btn" onClick={exitNav}>
               <ArrowLeft size={20} />
@@ -215,7 +412,6 @@ out center;`
             </div>
           </div>
 
-          {/* Bottom navigation panel - Waze style */}
           <div className="nav-bottom-panel">
             {routeInfo ? (
               <>
@@ -245,7 +441,7 @@ out center;`
                 <div className="nav-actions">
                   <button className="nav-btn-maps" onClick={openInMaps}>
                     <Navigation2 size={18} />
-                    Abrir no Google Maps
+                    Abrir no Waze
                   </button>
                   <button className="nav-btn-cancel" onClick={exitNav}>
                     <X size={18} />
@@ -265,7 +461,6 @@ out center;`
       {/* ═══════════════ NORMAL MODE ═══════════════ */}
       {!navMode && (
         <>
-          {/* Top search bar */}
           <div className="top-bar">
             <div className="app-logo-bar">
               <img src="/logo.png" alt="PerTo Saúde" className="app-logo-img" />
@@ -276,20 +471,24 @@ out center;`
             </div>
             <div className="search-bar">
               <Search size={18} color="#6B7280" />
-              <input type="text" placeholder="Buscar local ou endereço" readOnly />
+              <input 
+                type="text" 
+                placeholder="Buscar local (ex: Itaquera, SP)" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+              />
               <div className="divider" />
               <button className="filter-icon-btn"><SlidersHorizontal size={18} color="#2563EB" /></button>
             </div>
           </div>
 
-          {/* Search this area */}
           <div className={`search-area-wrap ${!showSearchBtn ? 'hidden' : ''}`}>
             <button className="search-area-btn" onClick={searchNewArea}>
               <MapPin size={15} /> Buscar nesta área
             </button>
           </div>
 
-          {/* FAB */}
           <button
             className={`fab-nav ${!activeFacility ? 'fab-disabled' : ''}`}
             onClick={() => activeFacility && startNav(activeFacility)}
@@ -298,7 +497,6 @@ out center;`
             <Navigation2 size={22} fill={activeFacility ? 'white' : '#9CA3AF'} />
           </button>
 
-          {/* Detail sheet (screen 2) */}
           {detailOpen && activeFacility && (
             <div className="detail-overlay" onClick={closeDetail}>
               <div className="detail-sheet" onClick={e => e.stopPropagation()}>
@@ -345,15 +543,14 @@ out center;`
                     <Navigation2 size={18} /> Traçar Rota
                   </button>
                   <button className="btn-share" onClick={() => {
-                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://maps.google.com/?q=${activeFacility.lat},${activeFacility.lon}`
-                    navigator.share ? navigator.share({ text }) : navigator.clipboard.writeText(text)
+                    const text = `${activeFacility.name}\n${activeFacility.address}\nhttps://maps.google.com/?q=${activeFacility.lat},${activeFacility.lon}`;
+                    navigator.share ? navigator.share({ text }) : navigator.clipboard.writeText(text);
                   }}>Compartilhar</button>
                 </div>
               </div>
             </div>
           )}
 
-          {/* Bottom list sheet (screen 1) */}
           {!detailOpen && (
             <div className="bottom-sheet">
               <div className="sheet-handle" />
@@ -387,7 +584,7 @@ out center;`
         </>
       )}
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

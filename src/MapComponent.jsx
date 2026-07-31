@@ -1,164 +1,230 @@
-import React, { useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/maplibre';
+import * as maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
-
-const createPinIcon = (color = '#2563EB') =>
-  L.divIcon({
-    className: 'custom-marker',
-    html: `<div class="marker-pin" style="background:${color}"></div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-  });
-
-const createUserIcon = () =>
-  L.divIcon({
-    className: 'custom-marker',
-    html: `<div class="user-dot"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-  });
-
-const createDestIcon = (color) =>
-  L.divIcon({
-    className: 'custom-marker',
-    html: `<div style="
-      width:36px;height:36px;
-      background:${color};
-      border:3px solid #fff;
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      box-shadow:0 4px 12px rgba(0,0,0,.3);
-    "></div>`,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-  });
-
-const createClusterIcon = (cluster) =>
-  L.divIcon({
-    html: `<div class="cluster-icon">${cluster.getChildCount()}</div>`,
-    className: 'custom-cluster-marker',
-    iconSize: L.point(36, 36, true),
-  });
-
-const userIcon = createUserIcon();
-
-// Fit map to show both user and destination
-const FitBounds = ({ userLocation, destination }) => {
-  const map = useMap();
-  useEffect(() => {
-    if (userLocation && destination) {
-      map.fitBounds(
-        [[userLocation.lat, userLocation.lon], [destination.lat, destination.lon]],
-        { padding: [60, 60], animate: true }
-      );
+// We will use the actual Waze tile servers as a raster source!
+const MAP_STYLE = {
+  version: 8,
+  sources: {
+    'waze-tiles': {
+      type: 'raster',
+      tiles: [
+        'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
+        'https://worldtiles2.waze.com/tiles/{z}/{x}/{y}.png',
+        'https://worldtiles3.waze.com/tiles/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '© Waze'
     }
-  }, [userLocation, destination, map]);
-  return null;
+  },
+  layers: [
+    {
+      id: 'waze-layer',
+      type: 'raster',
+      source: 'waze-tiles',
+      minzoom: 0,
+      maxzoom: 20
+    }
+  ]
 };
 
-const ChangeView = ({ center, zoom }) => {
-  const map = useMap();
+// We'll create simple HTML markers instead of the old Leaflet divIcons
+const UserMarkerIcon = () => (
+  <div style={{
+    width: 24, height: 24, background: '#2563EB', border: '3px solid #fff',
+    borderRadius: '50%', boxShadow: '0 0 15px rgba(37,99,235,0.8)',
+    animation: 'pulse 2s infinite'
+  }}></div>
+);
+
+const FacilityMarkerIcon = ({ color }) => (
+  <div style={{
+    width: 32, height: 32, background: color, border: '3px solid #fff',
+    borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)',
+    boxShadow: '0 4px 12px rgba(0,0,0,.3)'
+  }}>
+    <div style={{
+      width: 12, height: 12, background: '#fff', borderRadius: '50%',
+      position: 'absolute', top: 7, left: 7
+    }}></div>
+  </div>
+);
+
+const DestinationMarkerIcon = ({ color }) => (
+  <div style={{
+    width: 48, height: 48, background: color, border: '4px solid #fff',
+    borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)',
+    boxShadow: '0 6px 16px rgba(0,0,0,.4)', zIndex: 10
+  }}>
+    <div style={{
+      width: 16, height: 16, background: '#fff', borderRadius: '50%',
+      position: 'absolute', top: 12, left: 12
+    }}></div>
+  </div>
+);
+
+const MapComponent = ({
+  userLocation,
+  facilities,
+  activeFacility,
+  onFacilitySelect,
+  onMapMove,
+  getTypeColor,
+  navMode,
+  routeCoords
+}) => {
+  const mapRef = useRef();
+  
+  const defaultCenter = { longitude: -46.4496, latitude: -23.5413, zoom: 13, pitch: 45, bearing: 0 };
+  const [viewState, setViewState] = useState(defaultCenter);
+
+  // When userLocation is available initially, center it
   useEffect(() => {
-    if (center) map.setView(center, zoom, { animate: true });
-  }, [center, zoom, map]);
-  return null;
-};
+    if (userLocation && !navMode) {
+      setViewState(prev => ({
+        ...prev,
+        longitude: userLocation.lon,
+        latitude: userLocation.lat,
+        zoom: 14.5,
+        pitch: 60, // 3D effect
+        transitionDuration: 1000
+      }));
+    }
+  }, [userLocation, navMode]);
 
-const MapEvents = ({ onMove }) => {
-  useMapEvents({
-    dragend: (e) => { const c = e.target.getCenter(); onMove({ lat: c.lat, lon: c.lng }); },
-    zoomend: (e) => { const c = e.target.getCenter(); onMove({ lat: c.lat, lon: c.lng }); },
-  });
-  return null;
-};
+  // Fit bounds to route in Nav Mode
+  useEffect(() => {
+    if (navMode && userLocation && activeFacility && mapRef.current) {
+      const map = mapRef.current.getMap();
+      
+      // Calculate bounding box for route
+      const bounds = new maplibregl.LngLatBounds(
+        [userLocation.lon, userLocation.lat],
+        [userLocation.lon, userLocation.lat]
+      );
+      bounds.extend([activeFacility.lon, activeFacility.lat]);
+      if (routeCoords) {
+        routeCoords.forEach(c => bounds.extend([c[1], c[0]])); // routeCoords are [lat, lon], maplibre wants [lon, lat]
+      }
 
-const MapComponent = ({ userLocation, facilities, activeFacility, onFacilitySelect, onMapMove, getTypeColor, navMode, routeCoords }) => {
-  const defaultCenter = [-23.5413, -46.4496];
-  const center = userLocation ? [userLocation.lat, userLocation.lon] : defaultCenter;
+      map.fitBounds(bounds, {
+        padding: 60,
+        pitch: 65, // Max pitch for waze-like view
+        bearing: 0, // In a real app we'd calculate the bearing between user and destination
+        duration: 2000
+      });
+    }
+  }, [navMode, userLocation, activeFacility, routeCoords]);
+
+  // Prepare Route GeoJSON
+  const routeData = useMemo(() => {
+    if (!routeCoords || routeCoords.length === 0) return null;
+    return {
+      type: 'Feature',
+      properties: {},
+      geometry: {
+        type: 'LineString',
+        coordinates: routeCoords.map(c => [c[1], c[0]]) // Leaflet is [lat, lon], MapLibre/GeoJSON is [lon, lat]
+      }
+    };
+  }, [routeCoords]);
+
+  const onMoveEnd = (e) => {
+    setViewState(e.viewState);
+    if (onMapMove) {
+      onMapMove({ lat: e.viewState.latitude, lon: e.viewState.longitude });
+    }
+  };
 
   return (
-    <MapContainer
-      center={center}
-      zoom={14}
-      className="map-area"
-      zoomControl={false}
-    >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+    <div className="map-area">
+      <Map
+        ref={mapRef}
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        onMoveEnd={onMoveEnd}
+        mapStyle={MAP_STYLE}
+        mapLib={maplibregl}
+        maxPitch={85} // Allow high pitch for 3D effect
+        interactiveLayerIds={['facilities-layer']}
+      >
+        <NavigationControl position="top-right" showCompass={true} />
 
-      {!navMode && <ChangeView center={center} zoom={userLocation ? 15 : 13} />}
-      {navMode && activeFacility && userLocation && (
-        <FitBounds userLocation={userLocation} destination={activeFacility} />
-      )}
+        {/* User Marker */}
+        {userLocation && (
+          <Marker
+            longitude={userLocation.lon}
+            latitude={userLocation.lat}
+            anchor="center"
+            style={{ zIndex: 100 }}
+          >
+            <UserMarkerIcon />
+          </Marker>
+        )}
 
-      <MapEvents onMove={onMapMove} />
+        {/* Destination Marker (Nav Mode) */}
+        {navMode && activeFacility && (
+          <Marker
+            longitude={activeFacility.lon}
+            latitude={activeFacility.lat}
+            anchor="bottom"
+            style={{ zIndex: 90 }}
+          >
+            <DestinationMarkerIcon color={getTypeColor(activeFacility.type)} />
+          </Marker>
+        )}
 
-      {/* Route polyline */}
-      {navMode && routeCoords && routeCoords.length > 0 && (
-        <>
-          {/* Shadow */}
-          <Polyline
-            positions={routeCoords}
-            pathOptions={{ color: '#1d4ed8', weight: 10, opacity: 0.2 }}
-          />
-          {/* Main route */}
-          <Polyline
-            positions={routeCoords}
-            pathOptions={{ color: '#2563EB', weight: 6, opacity: 0.95, lineCap: 'round', lineJoin: 'round' }}
-          />
-        </>
-      )}
+        {/* Facility Markers (Normal Mode) */}
+        {!navMode && facilities.map(fac => (
+          <Marker
+            key={fac.id}
+            longitude={fac.lon}
+            latitude={fac.lat}
+            anchor="bottom"
+            onClick={e => {
+              e.originalEvent.stopPropagation();
+              onFacilitySelect(fac);
+            }}
+          >
+            <FacilityMarkerIcon color={getTypeColor(fac.type)} />
+          </Marker>
+        ))}
 
-      {/* User location */}
-      {userLocation && (
-        <Marker position={[userLocation.lat, userLocation.lon]} icon={userIcon}>
-          <Popup>Você está aqui</Popup>
-        </Marker>
-      )}
-
-      {/* Destination pin in nav mode */}
-      {navMode && activeFacility && (
-        <Marker
-          position={[activeFacility.lat, activeFacility.lon]}
-          icon={createDestIcon(getTypeColor ? getTypeColor(activeFacility.type) : '#2563EB')}
-        >
-          <Popup>{activeFacility.name}</Popup>
-        </Marker>
-      )}
-
-      {/* Facility cluster markers (hidden in nav mode) */}
-      {!navMode && (
-        <MarkerClusterGroup
-          iconCreateFunction={createClusterIcon}
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          zoomToBoundsOnClick={true}
-          maxClusterRadius={50}
-        >
-          {facilities.map((fac) => (
-            <Marker
-              key={fac.id}
-              position={[fac.lat, fac.lon]}
-              icon={createPinIcon(getTypeColor ? getTypeColor(fac.type) : '#2563EB')}
-              eventHandlers={{ click: () => onFacilitySelect(fac) }}
-            >
-              <Popup><strong>{fac.name}</strong><br />{fac.type}</Popup>
-            </Marker>
-          ))}
-        </MarkerClusterGroup>
-      )}
-    </MapContainer>
+        {/* Route Line (Nav Mode) */}
+        {navMode && routeData && (
+          <Source id="route-source" type="geojson" data={routeData}>
+            {/* Outline/Shadow */}
+            <Layer
+              id="route-line-bg"
+              type="line"
+              layout={{
+                'line-join': 'round',
+                'line-cap': 'round'
+              }}
+              paint={{
+                'line-color': '#1d4ed8',
+                'line-width': 10,
+                'line-opacity': 0.3
+              }}
+            />
+            {/* Main Line */}
+            <Layer
+              id="route-line"
+              type="line"
+              layout={{
+                'line-join': 'round',
+                'line-cap': 'round'
+              }}
+              paint={{
+                'line-color': '#2563EB',
+                'line-width': 6
+              }}
+            />
+          </Source>
+        )}
+      </Map>
+    </div>
   );
 };
 
