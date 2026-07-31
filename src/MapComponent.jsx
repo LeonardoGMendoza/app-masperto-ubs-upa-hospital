@@ -39,18 +39,33 @@ const MAP_STYLE = isIOS ? {
   layers: [{ id: 'waze-layer', type: 'raster', source: 'waze-tiles', minzoom: 0, maxzoom: 20 }]
 };
 
-// The exact red pin marker created purely in CSS to avoid black backgrounds and broken image links
-const UserMarkerIcon = () => (
-  <div className="custom-red-pin">
-    <div className="custom-red-pin-inner">
-      <div className="red-pin-cross"></div>
-      <div className="red-pin-eyes">
-        <div className="red-pin-eye"></div>
-        <div className="red-pin-eye"></div>
+const UserMarkerIcon = ({ invisible }) => (
+  invisible ? (
+    <div className="waze-ghost" style={{transform: 'scale(0.9)'}}>
+      <div className="waze-ghost-wheel-left"></div>
+      <div className="waze-ghost-wheel-right"></div>
+      <div className="waze-ghost-face">
+        <div className="waze-ghost-eyes">
+          <div className="waze-ghost-eye"></div>
+          <div className="waze-ghost-eye"></div>
+        </div>
+        <div className="waze-ghost-mouth">
+          <div className="waze-ghost-tongue"></div>
+        </div>
       </div>
-      <div className="red-pin-smile"></div>
     </div>
-  </div>
+  ) : (
+    <div className="custom-red-pin">
+      <div className="custom-red-pin-inner">
+        <div className="red-pin-cross"></div>
+        <div className="red-pin-eyes">
+          <div className="red-pin-eye"></div>
+          <div className="red-pin-eye"></div>
+        </div>
+        <div className="red-pin-smile"></div>
+      </div>
+    </div>
+  )
 );
 
 const FacilityMarkerIcon = ({ color }) => (
@@ -174,7 +189,7 @@ const MapComponent = ({
             anchor="center"
             style={{ zIndex: 100 }}
           >
-            <UserMarkerIcon />
+            <UserMarkerIcon invisible={invisible} />
           </Marker>
         )}
 

@@ -396,19 +396,33 @@ out center;`;
                 Juntou-se em {userData.joinedAt ? new Date(userData.joinedAt).getFullYear() : new Date().getFullYear()}
               </div>
             </div>
-
-            <div className="profile-humor-icon" style={{margin: '-15px auto 10px'}}>
-              {/* Custom Red Pin as the Humor Icon */}
-              <div className="custom-red-pin" style={{transform: 'scale(1.2) rotate(-45deg)', margin: '10px 0'}}>
-                <div className="custom-red-pin-inner">
-                  <div className="red-pin-cross"></div>
-                  <div className="red-pin-eyes">
-                    <div className="red-pin-eye"></div>
-                    <div className="red-pin-eye"></div>
+            <div className="profile-humor-icon" style={{margin: '0 auto 20px', display: 'flex', justifyContent: 'center'}}>
+              {invisible ? (
+                <div className="waze-ghost" style={{transform: 'scale(1.5)', margin: '10px 0'}}>
+                  <div className="waze-ghost-wheel-left"></div>
+                  <div className="waze-ghost-wheel-right"></div>
+                  <div className="waze-ghost-face">
+                    <div className="waze-ghost-eyes">
+                      <div className="waze-ghost-eye"></div>
+                      <div className="waze-ghost-eye"></div>
+                    </div>
+                    <div className="waze-ghost-mouth">
+                      <div className="waze-ghost-tongue"></div>
+                    </div>
                   </div>
-                  <div className="red-pin-smile"></div>
                 </div>
-              </div>
+              ) : (
+                <div className="custom-red-pin" style={{transform: 'scale(1.2) rotate(-45deg)', margin: '10px 0'}}>
+                  <div className="custom-red-pin-inner">
+                    <div className="red-pin-cross"></div>
+                    <div className="red-pin-eyes">
+                      <div className="red-pin-eye"></div>
+                      <div className="red-pin-eye"></div>
+                    </div>
+                    <div className="red-pin-smile"></div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <p style={{fontSize: '0.85rem', color: '#6B7280', margin: '14px 20px 10px'}}>
@@ -616,6 +630,7 @@ out center;`;
         getTypeColor={typeColor}
         navMode={navMode}
         routeCoords={routeCoords}
+        invisible={invisible}
       />
 
       {/* ═══════════════ NAVIGATION MODE (Screen 3 - Waze style) ═══════════════ */}
@@ -671,8 +686,12 @@ out center;`;
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: 'center', color: '#6B7280', padding: '8px 0' }}>
-                Calculando rota…
+              <div style={{ textAlign: 'center', color: '#6B7280', padding: '16px 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ marginBottom: 16 }}>Calculando rota…</div>
+                <button className="nav-btn-cancel" onClick={exitNav} style={{ maxWidth: 200 }}>
+                  <X size={18} />
+                  Cancelar
+                </button>
               </div>
             )}
           </div>
