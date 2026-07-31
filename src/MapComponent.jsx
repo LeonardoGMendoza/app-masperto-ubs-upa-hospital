@@ -3,8 +3,11 @@ import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapl
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// Using OpenStreetMap tiles because Waze tiles cause WebGL crashes on iPhones due to CORS blocks. OSM shows streets clearly.
-const MAP_STYLE = {
+// Detect iOS to prevent WebGL CORS crash with Waze tiles
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+// Use Waze tiles for Android/Desktop (user preference), and fallback to OSM for iOS to prevent the white screen crash
+const MAP_STYLE = isIOS ? {
   version: 8,
   sources: {
     'osm-tiles': {
@@ -15,18 +18,25 @@ const MAP_STYLE = {
         'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
       ],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors'
+      attribution: '© OpenStreetMap'
     }
   },
-  layers: [
-    {
-      id: 'osm-layer',
+  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 20 }]
+} : {
+  version: 8,
+  sources: {
+    'waze-tiles': {
       type: 'raster',
-      source: 'osm-tiles',
-      minzoom: 0,
-      maxzoom: 20
+      tiles: [
+        'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
+        'https://worldtiles2.waze.com/tiles/{z}/{x}/{y}.png',
+        'https://worldtiles3.waze.com/tiles/{z}/{x}/{y}.png'
+      ],
+      tileSize: 256,
+      attribution: '© Waze'
     }
-  ]
+  },
+  layers: [{ id: 'waze-layer', type: 'raster', source: 'waze-tiles', minzoom: 0, maxzoom: 20 }]
 };
 
 // The exact red pin marker created purely in CSS to avoid black backgrounds and broken image links

@@ -51,6 +51,7 @@ function App() {
   const [workInput, setWorkInput] = useState('');
   const [editingHome, setEditingHome] = useState(false);
   const [editingWork, setEditingWork] = useState(false);
+  const [invisible, setInvisible] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -416,10 +417,10 @@ out center;`;
           </div>
 
           <div className="profile-settings-list">
-            <div className="profile-setting-item">
+            <div className="profile-setting-item" onClick={() => setInvisible(!invisible)} style={{cursor: 'pointer'}}>
               Ficar invisível
-              <div style={{width: 44, height: 24, background: '#E5E7EB', borderRadius: 12, position: 'relative'}}>
-                <div style={{width: 20, height: 20, background: '#fff', borderRadius: 10, position: 'absolute', top: 2, left: 2, boxShadow: '0 1px 3px rgba(0,0,0,.2)'}}></div>
+              <div style={{width: 44, height: 24, background: invisible ? '#34D399' : '#E5E7EB', borderRadius: 12, position: 'relative', transition: '0.3s'}}>
+                <div style={{width: 20, height: 20, background: '#fff', borderRadius: 10, position: 'absolute', top: 2, left: invisible ? 22 : 2, boxShadow: '0 1px 3px rgba(0,0,0,.2)', transition: '0.3s'}}></div>
               </div>
             </div>
             <div className="profile-setting-item" onClick={() => setAchievementsOpen(true)}>
@@ -464,9 +465,24 @@ out center;`;
           <div className="sub-modal-title">Casa e trabalho</div>
         </div>
         <div className="sub-modal-content">
-          <div className="sub-modal-banner">
-            <h3>O PerTo te dá cobertura</h3>
-            <p>Receba atualizações personalizadas configurando sua casa e trabalho.</p>
+          <div className="sub-modal-banner" style={{textAlign: 'center', padding: '24px 20px 16px', background: '#F8FAFC'}}>
+            <div style={{width: 120, height: 120, borderRadius: '50%', background: '#BAE6FD', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '6px solid white', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', position: 'relative'}}>
+              {/* CSS Illustration of House and Building */}
+              <div style={{position: 'absolute', bottom: 12, left: 15, width: 40, height: 40, background: '#fff', border: '3px solid #374151', borderRadius: '4px 4px 0 0', zIndex: 2}}>
+                <div style={{width: 0, height: 0, borderLeft: '22px solid transparent', borderRight: '22px solid transparent', borderBottom: '22px solid #EF4444', position: 'absolute', top: -23, left: -5}}></div>
+                <div style={{width: 12, height: 16, background: '#8B5CF6', position: 'absolute', bottom: 0, left: 11, borderRadius: '4px 4px 0 0', border: '3px solid #374151', borderBottom: 'none'}}></div>
+                <div style={{width: 8, height: 8, background: '#93C5FD', borderRadius: '50%', border: '2px solid #374151', position: 'absolute', top: 6, left: 13}}></div>
+              </div>
+              <div style={{position: 'absolute', bottom: 25, right: 15, width: 45, height: 60, background: '#E0F2FE', border: '3px solid #374151', borderRadius: '4px 4px 0 0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, padding: 4}}>
+                <div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div><div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div>
+                <div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div><div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div>
+                <div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div><div style={{background: '#93C5FD', height: 8, border: '1px solid #374151'}}></div>
+              </div>
+              <div style={{position: 'absolute', bottom: -5, left: -20, right: -20, height: 22, background: '#9CA3AF', borderTop: '3px solid #374151', borderRadius: '50%'}}></div>
+              <div style={{position: 'absolute', bottom: 5, left: 10, right: 10, height: 4, background: '#D1D5DB'}}></div>
+            </div>
+            <h3 style={{fontSize: '1.25rem', fontWeight: 800, marginBottom: 8}}>O Waze te dá cobertura</h3>
+            <p style={{fontSize: '0.9rem', color: '#4B5563', lineHeight: 1.4}}>Receba atualizações do trânsito personalizadas para seu percurso diário ao configurar sua casa e trabalho</p>
           </div>
           <div className="sub-modal-list">
             <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}} onClick={() => !editingHome && setEditingHome(true)}>
