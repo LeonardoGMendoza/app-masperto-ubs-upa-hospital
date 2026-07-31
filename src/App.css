@@ -201,6 +201,44 @@ body {
    NORMAL MODE
 ══════════════════════════════════════════════ */
 
+/* Logo Bar */
+.app-logo-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 20px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.10);
+}
+
+.app-logo-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+
+.app-logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.app-logo-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #111827;
+  line-height: 1;
+}
+
+.app-logo-tagline {
+  font-size: 0.72rem;
+  color: #6B7280;
+  font-weight: 500;
+}
+
 /* Top Search Bar */
 .top-bar {
   position: absolute;
@@ -231,7 +269,7 @@ body {
 
 /* Search area button */
 .search-area-wrap {
-  position: absolute; top: 78px; left: 50%;
+  position: absolute; top: 132px; left: 50%;
   transform: translateX(-50%); z-index: 900;
   transition: opacity .25s, transform .25s;
 }

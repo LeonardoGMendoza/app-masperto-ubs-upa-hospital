@@ -267,6 +267,13 @@ out center;`
         <>
           {/* Top search bar */}
           <div className="top-bar">
+            <div className="app-logo-bar">
+              <img src="/logo.png" alt="PerTo Saúde" className="app-logo-img" />
+              <div className="app-logo-text">
+                <span className="app-logo-name">PerTo <span style={{color:'#2563EB'}}>Saúde</span></span>
+                <span className="app-logo-tagline">Saúde perto de você</span>
+              </div>
+            </div>
             <div className="search-bar">
               <Search size={18} color="#6B7280" />
               <input type="text" placeholder="Buscar local ou endereço" readOnly />
