@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, SlidersHorizontal, Navigation2, Building2, X, ChevronRight, 
   MapPin, Clock, ArrowLeft, Menu, User, Map, Inbox, Settings, HelpCircle, Power,
-  Briefcase, Home as HomeIcon, Award, Shield
+  Briefcase, Home as HomeIcon, Award, Shield, Edit2
 } from 'lucide-react';
 import MapComponent from './MapComponent';
 import { auth, loginWithGoogle, logout, addPoints, updateUserData, db } from './firebase';
@@ -49,6 +49,8 @@ function App() {
   // Forms state
   const [homeInput, setHomeInput] = useState('');
   const [workInput, setWorkInput] = useState('');
+  const [editingHome, setEditingHome] = useState(false);
+  const [editingWork, setEditingWork] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -470,37 +472,47 @@ out center;`;
             <p>Receba atualizações personalizadas configurando sua casa e trabalho.</p>
           </div>
           <div className="sub-modal-list">
-            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}}>
-              <div style={{display: 'flex', gap: 16, alignItems: 'center'}}>
-                <HomeIcon size={24} className="sub-modal-list-icon" />
+            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}} onClick={() => !editingHome && setEditingHome(true)}>
+              <div style={{display: 'flex', gap: 16, alignItems: 'center', width: '100%'}}>
+                <HomeIcon size={24} className="sub-modal-list-icon" color="#6B7280" />
                 <div className="sub-modal-list-text">
                   <div className="sub-modal-list-title">Casa</div>
                   <div className="sub-modal-list-desc">{userData.home || 'Toque para adicionar'}</div>
                 </div>
+                {!editingHome && <Edit2 size={18} color="#9CA3AF" />}
               </div>
-              <input 
-                className="sub-modal-input" 
-                placeholder="Ex: Rua A, 123 - São Paulo"
-                value={homeInput} onChange={e => setHomeInput(e.target.value)}
-              />
+              {editingHome && (
+                <div style={{marginTop: 12, display: 'flex', gap: 8}}>
+                  <input 
+                    className="sub-modal-input" style={{marginTop: 0, flex: 1}}
+                    placeholder="Digite o endereço da sua Casa"
+                    value={homeInput} onChange={e => setHomeInput(e.target.value)}
+                  />
+                  <button className="sub-modal-save-btn" style={{marginTop: 0}} onClick={(e) => { e.stopPropagation(); saveHomeWork(); setEditingHome(false); }}>Salvar</button>
+                </div>
+              )}
             </div>
-            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}}>
-              <div style={{display: 'flex', gap: 16, alignItems: 'center'}}>
-                <Briefcase size={24} className="sub-modal-list-icon" />
+            
+            <div className="sub-modal-list-item" style={{flexDirection: 'column', alignItems: 'stretch'}} onClick={() => !editingWork && setEditingWork(true)}>
+              <div style={{display: 'flex', gap: 16, alignItems: 'center', width: '100%'}}>
+                <Briefcase size={24} className="sub-modal-list-icon" color="#6B7280" />
                 <div className="sub-modal-list-text">
                   <div className="sub-modal-list-title">Trabalho</div>
                   <div className="sub-modal-list-desc">{userData.work || 'Toque para adicionar'}</div>
                 </div>
+                {!editingWork && <Edit2 size={18} color="#9CA3AF" />}
               </div>
-              <input 
-                className="sub-modal-input" 
-                placeholder="Ex: Av Paulista, 1000 - São Paulo"
-                value={workInput} onChange={e => setWorkInput(e.target.value)}
-              />
+              {editingWork && (
+                <div style={{marginTop: 12, display: 'flex', gap: 8}}>
+                  <input 
+                    className="sub-modal-input" style={{marginTop: 0, flex: 1}}
+                    placeholder="Digite o endereço do seu Trabalho"
+                    value={workInput} onChange={e => setWorkInput(e.target.value)}
+                  />
+                  <button className="sub-modal-save-btn" style={{marginTop: 0}} onClick={(e) => { e.stopPropagation(); saveHomeWork(); setEditingWork(false); }}>Salvar</button>
+                </div>
+              )}
             </div>
-          </div>
-          <div style={{padding: '0 20px'}}>
-            <button className="sidebar-login-btn" onClick={saveHomeWork}>Salvar Endereços</button>
           </div>
         </div>
       </div>
@@ -746,6 +758,37 @@ out center;`;
                     navigator.share ? navigator.share({ text }) : navigator.clipboard.writeText(text);
                   }}>Compartilhar</button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {!detailOpen && (
+            <div className="bottom-sheet">
+              <div className="sheet-handle" />
+              <div className="sheet-label">UNIDADES PRÓXIMAS · {facilities.length} encontradas</div>
+              <div className="facility-list">
+                {facilities.length === 0 && !loading && (
+                  <p className="empty-msg">Nenhuma unidade encontrada. Arraste o mapa e toque em "Buscar nesta área".</p>
+                )}
+                {facilities.map(fac => (
+                  <div
+                    key={fac.id}
+                    className={`facility-card ${activeFacility?.id === fac.id ? 'fc-active' : ''}`}
+                    onClick={() => openDetail(fac)}
+                  >
+                    <div className="fc-icon" style={{ background: typeColor(fac.type) + '18', color: typeColor(fac.type) }}>
+                      <Building2 size={18} />
+                    </div>
+                    <div className="fc-info">
+                      <div className="fc-name">{fac.name}</div>
+                      <div className="fc-type" style={{ color: typeColor(fac.type) }}>{fac.type}</div>
+                    </div>
+                    <div className="fc-right">
+                      <div className="fc-dist">{fmtDist(fac.distance)}</div>
+                      <ChevronRight size={16} color="#D1D5DB" />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
