@@ -3,59 +3,38 @@ import Map, { Marker, Source, Layer, NavigationControl } from 'react-map-gl/mapl
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-// We will use the actual Waze tile servers as a raster source!
-const MAP_STYLE = {
-  version: 8,
-  sources: {
-    'waze-tiles': {
-      type: 'raster',
-      tiles: [
-        'https://worldtiles1.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles2.waze.com/tiles/{z}/{x}/{y}.png',
-        'https://worldtiles3.waze.com/tiles/{z}/{x}/{y}.png'
-      ],
-      tileSize: 256,
-      attribution: '© Waze'
-    }
-  },
-  layers: [
-    {
-      id: 'waze-layer',
-      type: 'raster',
-      source: 'waze-tiles',
-      minzoom: 0,
-      maxzoom: 20
-    }
-  ]
-};
+// We use Carto Voyager to avoid CORS blocks on iOS Safari that cause the white screen
+const MAP_STYLE = "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
 
-// We'll create simple HTML markers instead of the old Leaflet divIcons
+// The exact marker image uploaded by the user
 const UserMarkerIcon = () => (
-  <div className="waze-ghost">
-    <div className="waze-ghost-wheel-left"></div>
-    <div className="waze-ghost-wheel-right"></div>
-    <div className="waze-ghost-face">
-      <div className="waze-ghost-eyes">
-        <div className="waze-ghost-eye"></div>
-        <div className="waze-ghost-eye"></div>
-      </div>
-      <div className="waze-ghost-mouth">
-        <div className="waze-ghost-tongue"></div>
-      </div>
-    </div>
-  </div>
+  <div style={{
+    width: '40px', height: '56px',
+    backgroundImage: 'url(./custom-marker.png)',
+    backgroundSize: 'contain',
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'center',
+    filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.3))'
+  }}></div>
 );
 
-const FacilityMarkerIcon = ({ color }) => (
+// Cute Waze-style pins for the facilities
+const FacilityMarkerIcon = ({ color, type }) => (
   <div style={{
-    width: 32, height: 32, background: color, border: '3px solid #fff',
+    width: 32, height: 32, background: '#fff', border: `3px solid ${color}`,
     borderRadius: '50% 50% 50% 0', transform: 'rotate(-45deg)',
-    boxShadow: '0 4px 12px rgba(0,0,0,.3)'
+    boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    position: 'relative'
   }}>
     <div style={{
-      width: 12, height: 12, background: '#fff', borderRadius: '50%',
-      position: 'absolute', top: 7, left: 7
-    }}></div>
+      width: 20, height: 20, background: color, borderRadius: '50%',
+      transform: 'rotate(45deg)', display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      {type === 'Hospital' || type === 'UPA' ? 
+        <span style={{color: '#fff', fontSize: '14px', fontWeight: 'bold'}}>+</span> : 
+        <span style={{color: '#fff', fontSize: '10px', fontWeight: 'bold'}}>H</span>}
+    </div>
   </div>
 );
 
