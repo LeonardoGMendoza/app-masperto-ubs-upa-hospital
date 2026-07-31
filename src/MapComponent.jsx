@@ -102,7 +102,8 @@ const MapComponent = ({
   onMapMove,
   getTypeColor,
   navMode,
-  routeCoords
+  routeCoords,
+  invisible
 }) => {
   const mapRef = useRef();
   

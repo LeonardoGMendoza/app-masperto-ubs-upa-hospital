@@ -651,37 +651,33 @@ out center;`;
           <div className="nav-bottom-panel">
             {routeInfo ? (
               <>
-                <div className="nav-stats">
-                  <div className="nav-stat-main">
-                    <span className="nav-stat-value">{fmtDuration(routeInfo.duration)}</span>
-                    <span className="nav-stat-label">tempo estimado</span>
+                <div className="waze-route-preview-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+                  <div style={{ fontSize: '28px', fontWeight: '800', color: '#111827' }}>
+                    {fmtDuration(routeInfo.duration)}
                   </div>
-                  <div className="nav-stat-divider" />
-                  <div className="nav-stat-secondary">
-                    <span className="nav-stat-value nav-stat-value--sm">
-                      {routeInfo.distance >= 1000
-                        ? `${(routeInfo.distance / 1000).toFixed(1)} km`
-                        : `${Math.round(routeInfo.distance)} m`}
-                    </span>
-                    <span className="nav-stat-label">distância</span>
+                  <div style={{ fontSize: '14px', color: '#6B7280', fontWeight: '500' }}>
+                    {routeInfo.distance >= 1000 ? `${(routeInfo.distance / 1000).toFixed(1)} km` : `${Math.round(routeInfo.distance)} m`}
                   </div>
-                  <div className="nav-stat-divider" />
-                  <div className="nav-stat-secondary">
-                    <span className="nav-stat-value nav-stat-value--sm">
-                      {new Date(Date.now() + routeInfo.duration * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <span className="nav-stat-label">chegada prevista</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '700', color: '#111827', marginBottom: 2 }}>
+                  Por R. Principal - Caminho mais rápido
+                </div>
+                <div style={{ fontSize: '14px', color: '#4B5563', marginBottom: 12 }}>
+                  Melhor rota com as condições de trânsito atuais
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+                  <div style={{ background: '#F9FAFB', padding: '4px 8px', borderRadius: 12, fontSize: '12px', fontWeight: '700', color: '#374151', display: 'flex', alignItems: 'center', gap: 4, border: '1px solid #E5E7EB' }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }}></div>
+                    Perigo
                   </div>
                 </div>
 
-                <div className="nav-actions">
-                  <button className="nav-btn-maps" onClick={openInMaps}>
-                    <Navigation2 size={18} />
-                    Abrir no Waze
+                <div className="nav-actions" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <button onClick={exitNav} style={{ background: '#EFF6FF', color: '#007AFF', padding: '14px', borderRadius: '24px', fontWeight: '700', fontSize: '16px', border: 'none', cursor: 'pointer' }}>
+                    Sair depois
                   </button>
-                  <button className="nav-btn-cancel" onClick={exitNav}>
-                    <X size={18} />
-                    Cancelar
+                  <button onClick={openInMaps} style={{ background: '#0099FF', color: '#FFF', padding: '14px', borderRadius: '24px', fontWeight: '700', fontSize: '16px', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+                    Ir agora
                   </button>
                 </div>
               </>
