@@ -5,4 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/app-masperto-ubs-upa-hospital/', // required for GitHub Pages
+  build: {
+    target: ['es2020', 'safari13', 'ios13']
+  }
 })
